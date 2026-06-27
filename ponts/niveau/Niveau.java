@@ -36,6 +36,8 @@ public class Niveau implements Serializable {
     private LinkedList<Vec2> posCoins;
     private LinkedList<Vec2> posLiaisons;
     int budget = 0;
+    private int limiteBarres = 0;
+    private ConfigurationVoiture configurationVoiture;
 
     /**
      * Constructeur d'un niveau
@@ -134,6 +136,29 @@ public class Niveau implements Serializable {
     }
 
     /**
+     * Les anciens fichiers de niveau n'ont pas cette valeur : une limite raisonnable
+     * est alors dérivée du budget pour conserver leur compatibilité.
+     */
+    public int getLimiteBarres() {
+        return Math.max(0, limiteBarres);
+    }
+
+    public void setLimiteBarres(int limiteBarres) {
+        this.limiteBarres = limiteBarres;
+    }
+
+    public ConfigurationVoiture getConfigurationVoiture() {
+        if (configurationVoiture == null) {
+            configurationVoiture = new ConfigurationVoiture();
+        }
+        return configurationVoiture;
+    }
+
+    public void setConfigurationVoiture(ConfigurationVoiture configurationVoiture) {
+        this.configurationVoiture = configurationVoiture;
+    }
+
+    /**
      * Annule la création du point
      */
     public void undo() {
@@ -156,28 +181,37 @@ public class Niveau implements Serializable {
      * @param nomNiveau
      * @param texteBudget
      */
-    public void sauvegarder(Fenetre fenetre, String nomNiveau, String texteBudget) {
+    public void sauvegarder(Fenetre fenetre, String nomNiveau, String texteBudget, String texteLimiteBarres) {
         String chemin = cheminNiveau(nomNiveau);
-        String titre = "Sauvegarde niveau";
+        String titre = "保存关卡";
 
         if (!valide()) {
-            JOptionPane.showMessageDialog(fenetre, "Le niveau est invalide", titre,
+            JOptionPane.showMessageDialog(fenetre, "关卡数据无效", titre,
                     JOptionPane.ERROR_MESSAGE);
         }
         try {
             budget = Integer.parseInt(texteBudget);
+            if (texteLimiteBarres == null || texteLimiteBarres.trim().isEmpty()
+                    || "不限".equals(texteLimiteBarres.trim())) {
+                limiteBarres = 0;
+            } else {
+                limiteBarres = Integer.parseInt(texteLimiteBarres.trim());
+                if (limiteBarres < 0) {
+                    throw new NumberFormatException();
+                }
+            }
             FileOutputStream fileOut = new FileOutputStream(chemin);
             ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
             objectOut.writeObject(this);
             objectOut.close();
             fileOut.close();
-            JOptionPane.showMessageDialog(fenetre, "Niveau sauvegardé", titre,
+            JOptionPane.showMessageDialog(fenetre, "关卡已保存", titre,
                     JOptionPane.INFORMATION_MESSAGE);
         } catch (NumberFormatException i) {
-            JOptionPane.showMessageDialog(fenetre, "Le budget est invalide", titre,
+            JOptionPane.showMessageDialog(fenetre, "预算数值无效", titre,
                     JOptionPane.ERROR_MESSAGE);
         } catch (FileNotFoundException i) {
-            JOptionPane.showMessageDialog(fenetre, "Le nom de niveau est invalide", titre,
+            JOptionPane.showMessageDialog(fenetre, "关卡名称无效", titre,
                     JOptionPane.ERROR_MESSAGE);
         } catch (IOException i) {
             i.printStackTrace();
@@ -196,7 +230,7 @@ public class Niveau implements Serializable {
             return null;
         }
         String chemin = cheminNiveau(nomNiveau);
-        String titre = "Charge niveau";
+        String titre = "加载关卡";
         Niveau niveau = null;
         try {
             FileInputStream fileIn = new FileInputStream(chemin);
@@ -206,7 +240,7 @@ public class Niveau implements Serializable {
             fileIn.close();
 
         } catch (FileNotFoundException i) {
-            JOptionPane.showMessageDialog(fenetre, "Niveau introuvable", titre, JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(fenetre, "找不到该关卡", titre, JOptionPane.ERROR_MESSAGE);
         } catch (IOException i) {
             i.printStackTrace();
         } catch (ClassNotFoundException i) {
@@ -238,12 +272,12 @@ public class Niveau implements Serializable {
      */
     public static void supprimer(Fenetre fenetre, String nomNiveau) {
         File file = new File(cheminNiveau(nomNiveau));
-        String titre = "Suppression niveau";
+        String titre = "删除关卡";
         if (file.delete()) {
-            JOptionPane.showMessageDialog(fenetre, "Niveau supprimé", titre,
+            JOptionPane.showMessageDialog(fenetre, "关卡已删除", titre,
                     JOptionPane.INFORMATION_MESSAGE);
         } else {
-            JOptionPane.showMessageDialog(fenetre, "Niveau introuvable", titre,
+            JOptionPane.showMessageDialog(fenetre, "找不到该关卡", titre,
                     JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -257,6 +291,20 @@ public class Niveau implements Serializable {
         Vec2 bordGauche = posCoins.getFirst();
         Vec2 bordDroit = posCoins.getLast();
 
+        // Etire les niveaux historiques afin de créer un véritable parcours horizontal.
+        float centreOriginal = (bordGauche.x + bordDroit.x) / 2f;
+        float facteurHorizontal = 1.45f;
+        for (Vec2 posCoin : posCoins) {
+            posCoin.x = centreOriginal + (posCoin.x - centreOriginal) * facteurHorizontal;
+        }
+        for (Vec2 posLiaison : posLiaisons) {
+            // Les liaisons partagent normalement les mêmes Vec2 que les coins.
+            if (!posCoins.contains(posLiaison)) {
+                posLiaison.x = centreOriginal + (posLiaison.x - centreOriginal) * facteurHorizontal;
+            }
+        }
+        bordGauche = posCoins.getFirst();
+        bordDroit = posCoins.getLast();
         float deltaX = box2d.getLargeur() / 2 - (bordGauche.x + bordDroit.x) / 2;
         float deltaY = 1.1f * box2d.getHauteur() / 2 - (bordDroit.y + bordGauche.y) / 2;
         for (Vec2 posCoin : posCoins) {
@@ -280,6 +328,11 @@ public class Niveau implements Serializable {
      */
     public float calculerArrivee() {
         return posCoins.get(posCoins.size() - 3).x;
+    }
+
+    public Vec2 calculerObjectif() {
+        Vec2 arrivee = posCoins.get(posCoins.size() - 3);
+        return new Vec2(arrivee.x, arrivee.y);
     }
 
 }

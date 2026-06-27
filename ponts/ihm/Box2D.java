@@ -9,9 +9,13 @@ import org.jbox2d.common.Vec2;
 public class Box2D {
 
     private Fenetre fenetre;
+    private int largeurPixelsFixe = -1;
+    private int hauteurPixelsFixe = -1;
 
+    private static final float LARGEUR_VUE = 100f;
     private float largeur;
     private float hauteur;
+    private float cameraX;
 
     /**
      * Constructeur de l'objet Box2D
@@ -20,10 +24,23 @@ public class Box2D {
      */
     public Box2D(Fenetre fenetre) {
         this.fenetre = fenetre;
+        initialiser();
+    }
 
-        largeur = 100f;
+    /**
+     * Constructeur sans fenêtre pour les tests de conversion souris/direction.
+     */
+    public Box2D(int largeurPixels, int hauteurPixels) {
+        this.fenetre = null;
+        this.largeurPixelsFixe = largeurPixels;
+        this.hauteurPixelsFixe = hauteurPixels;
+        initialiser();
+    }
+
+    private void initialiser() {
+        largeur = 180f;
         hauteur = getHauteurPixels() * coeff();
-
+        cameraX = 0f;
     }
 
     /**
@@ -32,7 +49,7 @@ public class Box2D {
      * @return coefficient
      */
     private float coeff() {
-        return largeur / getLargeurPixels();
+        return LARGEUR_VUE / getLargeurPixels();
     }
 
     /**
@@ -47,7 +64,7 @@ public class Box2D {
     }
 
     public float pixelToWorldX(int xP) {
-        return pixelToWorld(xP);
+        return pixelToWorld(xP) + cameraX;
     }
 
     public float pixelToWorldY(int yP) {
@@ -55,7 +72,9 @@ public class Box2D {
     }
 
     public Vec2 pixelToWorld(int xP, int yP) {
-        return new Vec2(pixelToWorld(xP), pixelToWorldY(yP));
+        // X 必须经过带 cameraX 的专用转换。此前直接使用 pixelToWorld(xP)
+        // 会在视口移动后漏掉相机偏移，导致所有绝对放置工具整体错位。
+        return new Vec2(pixelToWorldX(xP), pixelToWorldY(yP));
     }
 
     /**
@@ -70,7 +89,7 @@ public class Box2D {
     }
 
     public int worldToPixelX(float x) {
-        return worldToPixel(x);
+        return worldToPixel(x - cameraX);
     }
 
     public int worldToPixelY(float y) {
@@ -86,11 +105,23 @@ public class Box2D {
     }
 
     public int getLargeurPixels() {
-        return fenetre.getWidth();
+        return largeurPixelsFixe > 0 ? largeurPixelsFixe : fenetre.getWidth();
     }
 
     public int getHauteurPixels() {
-        return fenetre.getHeight();
+        return hauteurPixelsFixe > 0 ? hauteurPixelsFixe : fenetre.getHeight();
+    }
+
+    public float getCameraX() {
+        return cameraX;
+    }
+
+    public void setCameraX(float cameraX) {
+        this.cameraX = Math.max(0f, Math.min(largeur - LARGEUR_VUE, cameraX));
+    }
+
+    public void deplacerCameraPixels(int deltaPixels) {
+        setCameraX(cameraX - pixelToWorld(deltaPixels));
     }
 
 }

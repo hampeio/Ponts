@@ -34,6 +34,9 @@ public class Carrosserie extends ObjetPhysique {
 
     private BufferedImage image;
     private Color couleurContour = Color.BLACK;
+    private Voiture.Charge charge;
+    private Voiture.Style style;
+    private float masseNiveau;
 
     private PolygonShape shape;
     private float longueur = 8f;
@@ -45,7 +48,10 @@ public class Carrosserie extends ObjetPhysique {
      * @param world
      * @param pos
      */
-    public Carrosserie(World world, Vec2 pos) {
+    public Carrosserie(World world, Vec2 pos, Voiture.Charge charge, Voiture.Style style, float masseNiveau) {
+        this.charge = charge;
+        this.style = style;
+        this.masseNiveau = masseNiveau;
         creerObjetPhysique(world);
         setPos(pos);
         chargerImage();
@@ -61,7 +67,7 @@ public class Carrosserie extends ObjetPhysique {
         shape = new PolygonShape();
         shape.setAsBox(longueur / 2, largeur / 2);
 
-        FixtureDef fixtureDef = creerFixtureDef(FRICTION, ELASTICITE, DENSITE, CATEGORY, MASK);
+        FixtureDef fixtureDef = creerFixtureDef(FRICTION, ELASTICITE, charge.densite * masseNiveau, CATEGORY, MASK);
         fixtureDef.shape = shape;
         body.createFixture(fixtureDef);
     }
@@ -101,6 +107,22 @@ public class Carrosserie extends ObjetPhysique {
         Graphics2D g2d = (Graphics2D) g;
         g2d.rotate(-getAngle(), x, y);
         g2d.drawImage(imageTournee, null, x - largeur / 2, y - hauteur / 2);
+        g2d.setColor(new Color(style.couleur.getRed(), style.couleur.getGreen(), style.couleur.getBlue(), 105));
+        g2d.fillRoundRect(x - largeur / 2 + largeur / 12, y - hauteur / 2 + hauteur / 3,
+                largeur * 5 / 6, hauteur / 3, Math.max(8, hauteur / 4), Math.max(8, hauteur / 4));
+        if (charge.niveauVisuel >= 1) {
+            int cargoY = y - hauteur / 2 - hauteur / 5;
+            Color cargoColor = charge.niveauVisuel == 1 ? new Color(151, 94, 45) : new Color(95, 110, 120);
+            int boxes = charge.niveauVisuel == 1 ? 2 : 3;
+            int boxWidth = largeur / (boxes + 3);
+            for (int i = 0; i < boxes; i++) {
+                int cargoX = x - (boxes * boxWidth) / 2 + i * boxWidth;
+                g2d.setColor(cargoColor);
+                g2d.fillRect(cargoX, cargoY, boxWidth - 2, hauteur / 4);
+                g2d.setColor(Color.BLACK);
+                g2d.drawRect(cargoX, cargoY, boxWidth - 2, hauteur / 4);
+            }
+        }
         g2d.rotate(getAngle(), x, y);
 
         // Hitbox (si nécessaire)

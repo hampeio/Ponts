@@ -29,7 +29,7 @@ public class Fenetre extends JFrame {
      */
     public Fenetre() {
 
-        setTitle("Ponts");
+        setTitle(Theme.APP_NAME);
         setMinimumSize(new Dimension(LARGEUR_MIN, HAUTEUR_MIN));
         setExtendedState(MAXIMIZED_BOTH);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -120,6 +120,12 @@ public class Fenetre extends JFrame {
         UIManager.put("Button.font", fontResource);
         UIManager.put("ComboBox.font", fontResource);
         UIManager.put("TextField.font", fontResource);
+        UIManager.put("Panel.background", Theme.PANEL);
+        UIManager.put("Label.foreground", Theme.TEXT);
+        UIManager.put("Button.background", Theme.PANEL);
+        UIManager.put("Button.foreground", Theme.TEXT);
+        UIManager.put("Button.hoverBackground", Theme.ACCENT);
+        UIManager.put("Component.borderColor", Theme.PANEL_BORDER);
 
     }
 
