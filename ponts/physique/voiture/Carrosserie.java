@@ -21,6 +21,7 @@ import org.jbox2d.dynamics.FixtureDef;
 import org.jbox2d.dynamics.World;
 
 import ponts.ihm.Box2D;
+import ponts.Chemins;
 import ponts.physique.ObjetPhysique;
 
 /**
@@ -30,7 +31,7 @@ public class Carrosserie extends ObjetPhysique {
 
     public static final int CATEGORY = Voiture.CATEGORY;
     public static final int MASK = Voiture.MASK;
-    public static final Path CHEMIN_IMAGES = Paths.get("res", "images");
+    public static final Path CHEMIN_IMAGES = Chemins.ressource("images");
 
     private BufferedImage image;
     private Color couleurContour = Color.BLACK;

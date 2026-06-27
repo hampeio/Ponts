@@ -20,6 +20,7 @@ import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.imageio.ImageIO;
+import ponts.Chemins;
 
 /**
  * Visual skin for the game shell. Physics and level logic stay in ponts.physique.
@@ -41,7 +42,7 @@ public final class Theme {
 
     static {
         try {
-            backdrop = ImageIO.read(new File("res/images/distant-panorama.png"));
+            backdrop = ImageIO.read(Chemins.ressource("images", "distant-panorama.png").toFile());
         } catch (IOException ignored) {
             backdrop = null;
         }
