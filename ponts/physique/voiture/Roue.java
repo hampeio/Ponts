@@ -110,4 +110,9 @@ public class Roue extends ObjetPhysique {
         joint.setMotorSpeed(0);
     }
 
+    public void reglerMoteur(float vitesse, float couple) {
+        joint.setMotorSpeed(vitesse);
+        joint.setMaxMotorTorque(couple);
+    }
+
 }

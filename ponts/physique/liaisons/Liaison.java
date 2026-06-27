@@ -25,7 +25,8 @@ public abstract class Liaison extends ObjetPhysique {
     public static final int MASK = Bord.CATEGORY;
 
     public static final float RAYON = 0.5f;
-    private static final float RAYON_CLICK = RAYON * 3;
+    // 宽屏与高 DPI 下保留舒适的选点容错，实际约为节点视觉半径的 5 倍。
+    private static final float RAYON_CLICK = RAYON * 5;
 
     protected Color couleurRemplissage;
     private Color couleurSurvolee;

@@ -5,6 +5,9 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -20,12 +23,14 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.Timer;
+import javax.swing.SwingUtilities;
 import javax.swing.event.MouseInputListener;
 
 import org.jbox2d.common.Vec2;
 
 import ponts.niveau.Niveau;
 import ponts.physique.Partie;
+import ponts.physique.OutilConstruction;
 import ponts.physique.barres.Materiau;
 import ponts.physique.voiture.Voiture;
 
@@ -52,17 +57,28 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
     private JButton boutonPrecedent;
     private JComboBox<String> comboBoxNiveaux;
     private JButton boutonSuivant;
-    private JButton boutonMateriauGoudron;
-    private JButton boutonMateriauAcier;
-    private JButton boutonMateriauBois;
+    private JComboBox<Materiau> comboMateriau;
     private JButton boutonDemarrer;
     private JButton boutonRecommencer;
+    private JButton boutonBoost;
     private JButton boutonEditeur;
+    private JComboBox<OutilConstruction> comboOutil;
+    private JButton boutonConfirmerOutil;
+    private JButton boutonAnnulerOutil;
     private JComboBox<Voiture.Charge> comboCharge;
     private JComboBox<Voiture.Style> comboStyle;
     private JLabel textePrix;
     private JLabel texteBudget;
     private JLabel texteMeilleur;
+    private JLabel texteBarres;
+    private JLabel texteNoeud;
+    private JLabel texteSupports;
+    private JPanel zoneInteraction;
+    private int dernierXGlisser;
+    private boolean cameraEnGlissement;
+    private int sourisPixelX;
+    private int sourisPixelY;
+    private String dernierClic = "";
 
     /**
      * Constructeur de Jeu
@@ -89,6 +105,8 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
 
         addMouseListener(this);
         addMouseMotionListener(this);
+        zoneInteraction.addMouseListener(this);
+        zoneInteraction.addMouseMotionListener(this);
     }
 
     /**
@@ -102,7 +120,7 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
         this.setLayout(new BorderLayout());
         this.setOpaque(false);
 
-        JPanel ligneHaut = new Ligne(box2d.getLargeurPixels() / 20, box2d.getHauteurPixels() / 100);
+        JPanel ligneHaut = new Ligne(16, box2d.getHauteurPixels() / 100);
         Theme.skinPanel(ligneHaut);
         this.add(ligneHaut, BorderLayout.PAGE_START);
 
@@ -134,21 +152,10 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
         JPanel ligneMateriau = new Ligne();
         Theme.skinPanel(ligneMateriau);
         colonneMateriau.add(ligneMateriau);
-        boutonMateriauGoudron = new JButton("路面");
-        Theme.skinButton(boutonMateriauGoudron, Theme.icon(Theme.Symbol.ROAD));
-        boutonMateriauGoudron.setToolTipText("车辆可以行驶的桥面材料");
-        boutonMateriauGoudron.addActionListener(this);
-        ligneMateriau.add(boutonMateriauGoudron);
-        boutonMateriauBois = new JButton("木材");
-        Theme.skinButton(boutonMateriauBois, Theme.icon(Theme.Symbol.WOOD));
-        boutonMateriauBois.setToolTipText("价格便宜，但强度较低");
-        boutonMateriauBois.addActionListener(this);
-        ligneMateriau.add(boutonMateriauBois);
-        boutonMateriauAcier = new JButton("钢材");
-        Theme.skinButton(boutonMateriauAcier, Theme.icon(Theme.Symbol.STEEL));
-        boutonMateriauAcier.setToolTipText("强度更高，造价也更高");
-        boutonMateriauAcier.addActionListener(this);
-        ligneMateriau.add(boutonMateriauAcier);
+        comboMateriau = new JComboBox<Materiau>(Materiau.values());
+        comboMateriau.setToolTipText("路面板可供车辆行驶，其余构件用于承重支撑");
+        comboMateriau.addActionListener(this);
+        ligneMateriau.add(comboMateriau);
 
         JPanel colonneSimulation = new Colonne();
         Theme.skinPanel(colonneSimulation);
@@ -160,12 +167,19 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
         colonneSimulation.add(ligneControles);
         boutonDemarrer = new JButton();
         Theme.skinButton(boutonDemarrer, Theme.icon(Theme.Symbol.PLAY));
+        boutonDemarrer.setPreferredSize(new Dimension(118, 44));
         boutonDemarrer.addActionListener(this);
         ligneControles.add(boutonDemarrer);
         boutonRecommencer = new JButton("重置");
         Theme.skinButton(boutonRecommencer, Theme.icon(Theme.Symbol.RESET));
         boutonRecommencer.addActionListener(this);
         ligneControles.add(boutonRecommencer);
+        boutonBoost = new JButton("冲刺");
+        Theme.skinButton(boutonBoost, Theme.icon(Theme.Symbol.PLAY));
+        boutonBoost.setPreferredSize(new Dimension(104, 44));
+        boutonBoost.setToolTipText("模拟过程中可使用一次短时加速");
+        boutonBoost.addActionListener(this);
+        ligneControles.add(boutonBoost);
 
         JPanel colonneEditeur = new Colonne();
         Theme.skinPanel(colonneEditeur);
@@ -175,7 +189,17 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
         JPanel ligneEditeur = new Ligne();
         Theme.skinPanel(ligneEditeur);
         colonneEditeur.add(ligneEditeur);
-        boutonEditeur = new JButton("关卡编辑器");
+        comboOutil = new JComboBox<OutilConstruction>(OutilConstruction.values());
+        comboOutil.addActionListener(this);
+        ligneEditeur.add(comboOutil);
+        boutonConfirmerOutil = new JButton("确认");
+        boutonConfirmerOutil.setToolTipText("确认生成曲线填充");
+        boutonConfirmerOutil.addActionListener(this);
+        ligneEditeur.add(boutonConfirmerOutil);
+        boutonAnnulerOutil = new JButton("取消");
+        boutonAnnulerOutil.addActionListener(this);
+        ligneEditeur.add(boutonAnnulerOutil);
+        boutonEditeur = new JButton("编辑器");
         Theme.skinButton(boutonEditeur, Theme.icon(Theme.Symbol.EDIT));
         boutonEditeur.addActionListener(this);
         ligneEditeur.add(boutonEditeur);
@@ -196,7 +220,7 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
         comboStyle.addActionListener(this);
         ligneVehicule.add(comboStyle);
 
-        JPanel bas = new Ligne(box2d.getLargeurPixels() / 20, box2d.getHauteurPixels() / 50);
+        JPanel bas = new Ligne(24, box2d.getHauteurPixels() / 50);
         Theme.skinPanel(bas);
         this.add(bas, BorderLayout.PAGE_END);
 
@@ -206,6 +230,8 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
         JLabel prix = new JLabel("造价");
         colonnePrix.add(prix);
         textePrix = new JLabel();
+        textePrix.setPreferredSize(new Dimension(110, 24));
+        textePrix.setHorizontalAlignment(JLabel.CENTER);
         colonnePrix.add(textePrix);
 
         JPanel colonneBudget = new Colonne();
@@ -214,6 +240,8 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
         JLabel budget = new JLabel("预算");
         colonneBudget.add(budget);
         texteBudget = new JLabel();
+        texteBudget.setPreferredSize(new Dimension(110, 24));
+        texteBudget.setHorizontalAlignment(JLabel.CENTER);
         colonneBudget.add(texteBudget);
 
         JPanel colonneMeilleur = new Colonne();
@@ -222,7 +250,51 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
         JLabel meilleur = new JLabel("最佳");
         colonneMeilleur.add(meilleur);
         texteMeilleur = new JLabel();
+        texteMeilleur.setPreferredSize(new Dimension(110, 24));
+        texteMeilleur.setHorizontalAlignment(JLabel.CENTER);
         colonneMeilleur.add(texteMeilleur);
+
+        JPanel colonneBarres = new Colonne();
+        Theme.skinPanel(colonneBarres);
+        bas.add(colonneBarres);
+        JLabel barres = new JLabel("杆件");
+        colonneBarres.add(barres);
+        texteBarres = new JLabel();
+        texteBarres.setPreferredSize(new Dimension(90, 24));
+        texteBarres.setHorizontalAlignment(JLabel.CENTER);
+        colonneBarres.add(texteBarres);
+
+        JPanel colonneAide = new Colonne();
+        Theme.skinPanel(colonneAide);
+        bas.add(colonneAide);
+        JLabel aide = new JLabel("视角");
+        colonneAide.add(aide);
+        JLabel aideTexte = new JLabel("按住中键拖动");
+        colonneAide.add(aideTexte);
+
+        JPanel colonneDebug = new Colonne();
+        Theme.skinPanel(colonneDebug);
+        bas.add(colonneDebug);
+        colonneDebug.add(new JLabel("选点状态"));
+        texteNoeud = new JLabel("未锁定");
+        texteNoeud.setPreferredSize(new Dimension(150, 24));
+        texteNoeud.setHorizontalAlignment(JLabel.CENTER);
+        colonneDebug.add(texteNoeud);
+
+        JPanel colonneSupports = new Colonne();
+        Theme.skinPanel(colonneSupports);
+        bas.add(colonneSupports);
+        colonneSupports.add(new JLabel("支撑/节点"));
+        texteSupports = new JLabel();
+        texteSupports.setPreferredSize(new Dimension(190, 24));
+        texteSupports.setHorizontalAlignment(JLabel.CENTER);
+        colonneSupports.add(texteSupports);
+
+        // 子组件明确占据中央游戏区，保证空白画布也能接收全部鼠标按键。
+        zoneInteraction = new JPanel();
+        zoneInteraction.setOpaque(false);
+        zoneInteraction.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+        this.add(zoneInteraction, BorderLayout.CENTER);
     }
 
     /**
@@ -241,7 +313,6 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
         Theme.drawBackdrop(g, this);
 
         if (partie != null) {
-            majTextLabels();
             partie.dessiner(g, box2d, posSouris);
         }
     }
@@ -261,6 +332,7 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
 
                 partie.tickPhysique(posSouris, boutonSouris, clicSouris, dt);
                 clicSouris = false;
+                majTextLabels();
 
             }
 
@@ -291,18 +363,17 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
                 nouvellePartie();
             }
 
-            Materiau materiau = null;
-            if (source == boutonMateriauBois) {
-                materiau = Materiau.BOIS;
+            if (source == comboMateriau) {
+                partie.changementMateriau((Materiau) comboMateriau.getSelectedItem());
             }
-            if (source == boutonMateriauGoudron) {
-                materiau = Materiau.GOUDRON;
+            if (source == comboOutil) {
+                partie.changementOutil((OutilConstruction) comboOutil.getSelectedItem());
             }
-            if (source == boutonMateriauAcier) {
-                materiau = Materiau.ACIER;
+            if (source == boutonConfirmerOutil) {
+                partie.confirmerOutil();
             }
-            if (materiau != null) {
-                partie.changementMateriau(materiau);
+            if (source == boutonAnnulerOutil) {
+                partie.annulerOutil();
             }
 
             if (source == boutonDemarrer) {
@@ -312,6 +383,9 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
 
             if (source == boutonRecommencer) {
                 nouvellePartie();
+            }
+            if (source == boutonBoost) {
+                partie.activerBoost();
             }
         }
 
@@ -329,13 +403,35 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
      * Met à jour les labels concernant le prix en bas de l'écran
      */
     private void majTextLabels() {
-        textePrix.setText(partie.getPrix() + " 元");
-        texteBudget.setText(partie.getBuget() + " 元");
+        setTextSiChange(textePrix, partie.getPrix() + " 元");
+        setTextSiChange(texteBudget, partie.getBuget() + " 元");
         int meilleurPrix = recupererMeilleurPrix();
         if (meilleurPrix == -1) {
-            texteMeilleur.setText("暂无");
+            setTextSiChange(texteMeilleur, "暂无");
         } else {
-            texteMeilleur.setText(meilleurPrix + " 元");
+            setTextSiChange(texteMeilleur, meilleurPrix + " 元");
+        }
+        setTextSiChange(texteBarres, partie.getNombreBarres() + " / " + partie.getLimiteBarres());
+        setTextSiChange(texteSupports,
+                "锚 " + partie.getNombreAncragesUtilisateur()
+                        + "  墩 " + partie.getNombrePiliers()
+                        + "  节点 " + partie.getNombreNoeudsGeneres()
+                        + "  ¥" + partie.getCoutSupports());
+        boolean boostActif = partie.getSimulationPhysique() && partie.boostDisponible();
+        if (boutonBoost.isEnabled() != boostActif) {
+            boutonBoost.setEnabled(boostActif);
+        }
+        boolean verrouille = partie.noeudSousCurseurPixel(sourisPixelX, sourisPixelY);
+        String statut = verrouille ? "● 已锁定" : "○ 未锁定";
+        if (!dernierClic.isEmpty()) {
+            statut += " " + dernierClic;
+        }
+        setTextSiChange(texteNoeud, statut);
+    }
+
+    private void setTextSiChange(JLabel label, String texte) {
+        if (!texte.equals(label.getText())) {
+            label.setText(texte);
         }
     }
 
@@ -480,6 +576,10 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
             Voiture.Style style = comboStyle == null ? Voiture.Style.CLASSIQUE
                     : (Voiture.Style) comboStyle.getSelectedItem();
             partie = new Partie(this, box2d, niveau, charge, style);
+            if (comboOutil != null && comboOutil.getSelectedItem() != null) {
+                partie.changementOutil((OutilConstruction) comboOutil.getSelectedItem());
+            }
+            majTextLabels();
         } else {
             partie = null;
         }
@@ -503,7 +603,16 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
      * @param e
      */
     private void majPosSouris(MouseEvent e) {
-        posSouris = box2d.pixelToWorld(e.getX(), e.getY());
+        Point point = pointDansJeu(e);
+        sourisPixelX = point.x;
+        sourisPixelY = point.y;
+        posSouris = box2d.pixelToWorld(point.x, point.y);
+    }
+
+    private Point pointDansJeu(MouseEvent e) {
+        Point point = e.getLocationOnScreen();
+        SwingUtilities.convertPointFromScreen(point, this);
+        return point;
     }
 
     @Override
@@ -523,23 +632,53 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
     @Override
     public void mousePressed(MouseEvent e) {
         majPosSouris(e);
+        Point point = pointDansJeu(e);
         boutonSouris = e.getButton();
-        clicSouris = true;
+        if (e.getButton() == MouseEvent.BUTTON2) {
+            cameraEnGlissement = true;
+            dernierXGlisser = point.x;
+            setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+            zoneInteraction.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+            return;
+        }
+        if (partie != null) {
+            dernierClic = e.getButton() == MouseEvent.BUTTON1 ? "左键" : "右键";
+            partie.clicConstructionPixel(point.x, point.y, e.getButton());
+            majTextLabels();
+            repaint();
+        }
+        // 建造点击已经同步处理，避免物理 timer 再执行一次。
+        clicSouris = false;
     }
 
     @Override
     public void mouseReleased(MouseEvent e) {
         majPosSouris(e);
+        if (e.getButton() == MouseEvent.BUTTON2) {
+            cameraEnGlissement = false;
+            setCursor(Cursor.getDefaultCursor());
+            zoneInteraction.setCursor(Cursor.getPredefinedCursor(Cursor.CROSSHAIR_CURSOR));
+        }
     }
 
     @Override
     public void mouseDragged(MouseEvent e) {
+        Point point = pointDansJeu(e);
+        if (cameraEnGlissement) {
+            int delta = point.x - dernierXGlisser;
+            box2d.deplacerCameraPixels(delta);
+            dernierXGlisser = point.x;
+        }
         majPosSouris(e);
     }
 
     @Override
     public void mouseMoved(MouseEvent e) {
         majPosSouris(e);
+        if (partie != null) {
+            partie.deplacerConstructionPixel(sourisPixelX, sourisPixelY);
+            repaint();
+        }
     }
 
 }

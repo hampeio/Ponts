@@ -66,6 +66,8 @@ public class Voiture {
     private boolean arrivee = false;
     private float xDepart;
     private float xArrivee;
+    private float boostRestant = 0f;
+    private boolean boostUtilise = false;
 
     /**
      * Constructeur d'une voiture
@@ -131,6 +133,40 @@ public class Voiture {
             roueAvant.arreter();
             arretee = true;
         }
+    }
+
+    public boolean activerBoost() {
+        if (boostUtilise || arretee) {
+            return false;
+        }
+        boostUtilise = true;
+        boostRestant = 1.35f;
+        roueArriere.reglerMoteur(18f, 180f);
+        roueAvant.reglerMoteur(18f, 180f);
+        return true;
+    }
+
+    public void tick(float dt) {
+        if (boostRestant <= 0f) {
+            return;
+        }
+        boostRestant -= dt;
+        if (boostRestant <= 0f && !arretee) {
+            roueArriere.reglerMoteur(10f, 80f);
+            roueAvant.reglerMoteur(10f, 80f);
+        }
+    }
+
+    public boolean boostDisponible() {
+        return !boostUtilise;
+    }
+
+    public float getX() {
+        return carrosserie.getX();
+    }
+
+    public boolean objectifAtteint() {
+        return carrosserie.getX() >= xArrivee - 1.5f;
     }
 
 }

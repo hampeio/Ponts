@@ -29,10 +29,10 @@ public final class Theme {
     public static final String APP_NAME = "卡通桥梁工程师";
     public static final Color BACKGROUND = Color.decode("#17212b");
     public static final Color BACKGROUND_GRID = Color.decode("#223140");
-    public static final Color PANEL = Color.decode("#eef3f6");
-    public static final Color PANEL_BORDER = Color.decode("#9fb4c5");
-    public static final Color TEXT = Color.decode("#14212b");
-    public static final Color ACCENT = Color.decode("#ffb84d");
+    public static final Color PANEL = Color.decode("#f8f1df");
+    public static final Color PANEL_BORDER = Color.decode("#b97836");
+    public static final Color TEXT = Color.decode("#3c2a1d");
+    public static final Color ACCENT = Color.decode("#f29d38");
     public static final Color WATER = Color.decode("#2f9cbd");
     public static final Color WOOD = Color.decode("#b77a42");
     public static final Color STEEL = Color.decode("#6f879a");
@@ -41,7 +41,7 @@ public final class Theme {
 
     static {
         try {
-            backdrop = ImageIO.read(new File("res/images/cartoon-background.png"));
+            backdrop = ImageIO.read(new File("res/images/distant-panorama.png"));
         } catch (IOException ignored) {
             backdrop = null;
         }

@@ -35,7 +35,7 @@ public abstract class Barre extends ObjetPhysique {
     public static final int CATEGORY = 0b1000;
     public static final int MASK = Voiture.CATEGORY;
 
-    private static final float LONGUEUR_MAX = 8;
+    public static final float LONGUEUR_MAX = 8;
     private static final float LONGUEUR_MIN = 0;
 
     private ArrayList<Liaison> liaisonsLiees;
@@ -307,8 +307,10 @@ public abstract class Barre extends ObjetPhysique {
         Liaison liaison1 = liaisonsLiees.get(0);
         Liaison liaison2 = liaisonsLiees.get(1);
         Vec2 centre = liaison1.getPos().add(liaison2.getPos()).mul(0.5f);
-        Vec2 difference = liaison1.getPos().sub(liaison2.getPos());
-        float angle = (float) Math.atan(difference.y / difference.x);
+        // 方向必须从起始节点指向鼠标/目标节点。atan2 同时修复左向建造时
+        // atan(dy/dx) 丢失象限而造成的 180 度反转。
+        Vec2 difference = liaison2.getPos().sub(liaison1.getPos());
+        float angle = (float) Math.atan2(difference.y, difference.x);
         longueur = difference.length();
 
         shape.setAsBox(longueur / 2, LARGEUR / 2);

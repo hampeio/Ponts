@@ -5,6 +5,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Toolkit;
+import java.awt.Cursor;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
@@ -36,6 +37,8 @@ public class Editeur extends JPanel implements ActionListener, MouseInputListene
     private JButton boutonAnnuler;
     private JButton boutonEffacer;
     private JButton boutonJeu;
+    private int dernierXGlisser;
+    private boolean cameraEnGlissement;
 
     /**
      * Constructeur de l'éditeur
@@ -160,6 +163,12 @@ public class Editeur extends JPanel implements ActionListener, MouseInputListene
         colonneLiaison.add(liaisonCommande);
         JLabel liaison = new JLabel("添加锚点");
         colonneLiaison.add(liaison);
+
+        JPanel colonneCamera = new Colonne();
+        Theme.skinPanel(colonneCamera);
+        bas.add(colonneCamera);
+        colonneCamera.add(new JLabel("鼠标中键："));
+        colonneCamera.add(new JLabel("拖动视角"));
     }
 
     /**
@@ -234,13 +243,16 @@ public class Editeur extends JPanel implements ActionListener, MouseInputListene
 
     @Override
     public void mousePressed(MouseEvent e) {
+        if (e.getButton() == MouseEvent.BUTTON2) {
+            cameraEnGlissement = true;
+            dernierXGlisser = e.getX();
+            setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+            return;
+        }
         Vec2 posSouris = box2d.pixelToWorld(e.getX(), e.getY());
         switch (e.getButton()) {
             case 1: // clic gauche
                 niveau.ajouterPoint(posSouris);
-                break;
-            case 2: // clic molette
-                niveau.undo();
                 break;
             case 3: // clic droit
                 niveau.ajouterLiaison(posSouris);
@@ -251,10 +263,20 @@ public class Editeur extends JPanel implements ActionListener, MouseInputListene
 
     @Override
     public void mouseReleased(MouseEvent e) {
+        if (e.getButton() == MouseEvent.BUTTON2) {
+            cameraEnGlissement = false;
+            setCursor(Cursor.getDefaultCursor());
+        }
     }
 
     @Override
     public void mouseDragged(MouseEvent e) {
+        if (cameraEnGlissement) {
+            int delta = e.getX() - dernierXGlisser;
+            box2d.deplacerCameraPixels(delta);
+            dernierXGlisser = e.getX();
+            repaint();
+        }
     }
 
     @Override

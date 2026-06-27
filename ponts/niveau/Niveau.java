@@ -36,6 +36,7 @@ public class Niveau implements Serializable {
     private LinkedList<Vec2> posCoins;
     private LinkedList<Vec2> posLiaisons;
     int budget = 0;
+    private int limiteBarres = 0;
 
     /**
      * Constructeur d'un niveau
@@ -131,6 +132,21 @@ public class Niveau implements Serializable {
 
     public int getBudget() {
         return budget;
+    }
+
+    /**
+     * Les anciens fichiers de niveau n'ont pas cette valeur : une limite raisonnable
+     * est alors dérivée du budget pour conserver leur compatibilité.
+     */
+    public int getLimiteBarres() {
+        if (limiteBarres > 0) {
+            return limiteBarres;
+        }
+        return Math.max(14, Math.min(32, budget / 6000));
+    }
+
+    public void setLimiteBarres(int limiteBarres) {
+        this.limiteBarres = limiteBarres;
     }
 
     /**
@@ -257,6 +273,20 @@ public class Niveau implements Serializable {
         Vec2 bordGauche = posCoins.getFirst();
         Vec2 bordDroit = posCoins.getLast();
 
+        // Etire les niveaux historiques afin de créer un véritable parcours horizontal.
+        float centreOriginal = (bordGauche.x + bordDroit.x) / 2f;
+        float facteurHorizontal = 1.45f;
+        for (Vec2 posCoin : posCoins) {
+            posCoin.x = centreOriginal + (posCoin.x - centreOriginal) * facteurHorizontal;
+        }
+        for (Vec2 posLiaison : posLiaisons) {
+            // Les liaisons partagent normalement les mêmes Vec2 que les coins.
+            if (!posCoins.contains(posLiaison)) {
+                posLiaison.x = centreOriginal + (posLiaison.x - centreOriginal) * facteurHorizontal;
+            }
+        }
+        bordGauche = posCoins.getFirst();
+        bordDroit = posCoins.getLast();
         float deltaX = box2d.getLargeur() / 2 - (bordGauche.x + bordDroit.x) / 2;
         float deltaY = 1.1f * box2d.getHauteur() / 2 - (bordDroit.y + bordGauche.y) / 2;
         for (Vec2 posCoin : posCoins) {
@@ -280,6 +310,11 @@ public class Niveau implements Serializable {
      */
     public float calculerArrivee() {
         return posCoins.get(posCoins.size() - 3).x;
+    }
+
+    public Vec2 calculerObjectif() {
+        Vec2 arrivee = posCoins.get(posCoins.size() - 3);
+        return new Vec2(arrivee.x, arrivee.y);
     }
 
 }
