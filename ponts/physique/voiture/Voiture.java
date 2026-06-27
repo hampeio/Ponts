@@ -74,6 +74,7 @@ public class Voiture {
     private float volCooldownRestant;
     private boolean volDebloque;
     private float hauteurDepart;
+    private float hauteurCibleVol;
     /**
      * Constructeur d'une voiture
      * 
@@ -182,16 +183,23 @@ public class Voiture {
 
         if (volRestant > 0f) {
             volRestant -= dt;
-            if (carrosserie.getY() < hauteurDepart + config.volHauteurMax) {
+            if (carrosserie.getY() < hauteurCibleVol) {
                 float forceY = config.volPousseeVerticale;
                 if (!config.volSubitGravite) {
                     forceY += carrosserie.getBody().getMass() * 9.81f;
                 }
-                carrosserie.getBody().applyForceToCenter(new Vec2(config.volPousseeHorizontale, forceY));
+                carrosserie.getBody().applyForceToCenter(new Vec2(0f, forceY));
             }
+            carrosserie.getBody().applyForceToCenter(new Vec2(config.volPousseeHorizontale, 0f));
         }
 
-        float limite = boostRestant > 0f ? config.vitesseMax * config.boostIntensite : config.vitesseMax;
+        float limite = config.vitesseMax;
+        if (boostRestant > 0f) {
+            limite = Math.max(limite, config.vitesseMax * config.boostIntensite);
+        }
+        if (volRestant > 0f) {
+            limite = Math.max(limite, config.vitesseMax * 1.55f);
+        }
         limiterVitesse(carrosserie.getBody(), limite);
         limiterVitesse(roueArriere.getBody(), limite);
         limiterVitesse(roueAvant.getBody(), limite);
@@ -207,6 +215,15 @@ public class Voiture {
         }
         volRestant = config.volDuree;
         volCooldownRestant = config.volCooldown;
+        float hauteurCompetence = Math.min(config.volHauteurMax, 4f);
+        hauteurCibleVol = carrosserie.getY() + hauteurCompetence;
+        float vitesseAvant = config.vitesseMax * 1.45f;
+        appliquerVitesseMinimale(carrosserie.getBody(), vitesseAvant);
+        appliquerVitesseMinimale(roueArriere.getBody(), vitesseAvant);
+        appliquerVitesseMinimale(roueAvant.getBody(), vitesseAvant);
+        appliquerVitesseVerticaleMinimale(carrosserie.getBody(), 6.5f);
+        appliquerVitesseVerticaleMinimale(roueArriere.getBody(), 5.5f);
+        appliquerVitesseVerticaleMinimale(roueAvant.getBody(), 5.5f);
         return true;
     }
 
@@ -231,6 +248,13 @@ public class Voiture {
         Vec2 vitesse = body.getLinearVelocity();
         if (vitesse.x < vitesseX) {
             body.setLinearVelocity(new Vec2(vitesseX, vitesse.y));
+        }
+    }
+
+    private void appliquerVitesseVerticaleMinimale(org.jbox2d.dynamics.Body body, float vitesseY) {
+        Vec2 vitesse = body.getLinearVelocity();
+        if (vitesse.y < vitesseY) {
+            body.setLinearVelocity(new Vec2(vitesse.x, vitesseY));
         }
     }
 

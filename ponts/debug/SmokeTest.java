@@ -321,14 +321,22 @@ public final class SmokeTest {
             verifier(voiture.activerBoost(), "configured boost did not activate");
             verifier(voiture.activerVol(), "unlocked configured flight did not activate");
             float yInitial = voiture.getY();
+            float xInitial = voiture.getX();
             float vitesseMaxObservee = 0f;
+            float hauteurMaxObservee = yInitial;
+            float avanceMaxObservee = xInitial;
             for (int i = 0; i < 90; i++) {
                 float dt = 1f / 60f;
                 voiture.tick(dt);
                 world.step(dt, 10, 8);
                 vitesseMaxObservee = Math.max(vitesseMaxObservee, Math.abs(voiture.getVitesseX()));
+                hauteurMaxObservee = Math.max(hauteurMaxObservee, voiture.getY());
+                avanceMaxObservee = Math.max(avanceMaxObservee, voiture.getX());
             }
-            verifier(voiture.getY() > yInitial + 0.2f, "flight force did not lift the vehicle");
+            verifier(hauteurMaxObservee > yInitial + 2.5f,
+                    "flight did not lift the vehicle by approximately one car height");
+            verifier(avanceMaxObservee > xInitial + 5f,
+                    "flight did not produce a meaningful forward dash");
             verifier(vitesseMaxObservee > config.vitesseMax * 1.1f,
                     "boost was too weak to produce a noticeable speed increase");
             verifier(vitesseMaxObservee <= config.vitesseMax * config.boostIntensite + 0.5f,
