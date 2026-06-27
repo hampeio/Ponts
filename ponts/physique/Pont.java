@@ -208,7 +208,10 @@ public class Pont implements Serializable {
      * @return
      */
     private Vec2 posSourisMax(Barre barre, Vec2 posSouris) {
-        return posSouris;
+        if (barre == null || barre.inferieurLongeurMax(posSouris)) {
+            return posSouris;
+        }
+        return barre.posLiaisonMax(posSouris);
     }
 
     /**
@@ -1107,12 +1110,18 @@ public class Pont implements Serializable {
         Vec2 cible = liaisonEnCreation.getPos();
         int x = box2d.worldToPixelX(origine.x);
         int y = box2d.worldToPixelY(origine.y);
+        int rayon = box2d.worldToPixel(Barre.LONGUEUR_MAX);
         int cibleX = box2d.worldToPixelX(cible.x);
         int cibleY = box2d.worldToPixelY(cible.y);
 
         Stroke ancienTrait = g.getStroke();
         Color couleur = dernierPlacementValide ? Color.decode("#59c36a") : Color.decode("#f0a33a");
+        g.setColor(new Color(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), 28));
+        g.fillOval(x - rayon, y - rayon, rayon * 2, rayon * 2);
         g.setColor(new Color(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), 205));
+        g.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND,
+                10f, new float[] { 9f, 7f }, 0f));
+        g.drawOval(x - rayon, y - rayon, rayon * 2, rayon * 2);
         g.setStroke(new BasicStroke(2f));
         g.drawLine(x, y, cibleX, cibleY);
         g.fillOval(cibleX - 5, cibleY - 5, 10, 10);

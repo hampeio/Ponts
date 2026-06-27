@@ -277,8 +277,8 @@ public final class SmokeTest {
         Vec2 cibleLointaine = new Vec2(35f, 32f);
         pontLibre.gererInput(worldLibre, origine, 1, true, Materiau.BOIS, bordLibre);
         pontLibre.gererInput(worldLibre, cibleLointaine, 1, true, Materiau.BOIS, bordLibre);
-        verifier(pontLibre.getNombreBarres() == 1 && pontLibre.prix() > 1000,
-                "unlimited mode still clamped long free-angle bars");
+        verifier(pontLibre.getNombreBarres() == 1 && pontLibre.prix() == 1000,
+                "unlimited segment count incorrectly removed the per-segment length cap");
     }
 
     private static void testerConfigurationVoitureEtVol() {
