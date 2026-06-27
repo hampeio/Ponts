@@ -1,7 +1,6 @@
 package ponts.ihm;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -66,80 +65,100 @@ public class Editeur extends JPanel implements ActionListener, MouseInputListene
         this.setOpaque(false);
 
         JPanel ligneHaut = new Ligne(box2d.getLargeurPixels() / 20, box2d.getHauteurPixels() / 100);
+        Theme.skinPanel(ligneHaut);
         this.add(ligneHaut, BorderLayout.PAGE_START);
 
         JPanel colonneFichier = new Colonne();
+        Theme.skinPanel(colonneFichier);
         ligneHaut.add(colonneFichier);
-        JLabel texteFichier = new JLabel("Fichier");
+        JLabel texteFichier = new JLabel("文件");
         colonneFichier.add(texteFichier);
         JPanel ligneFichier = new Ligne();
+        Theme.skinPanel(ligneFichier);
         colonneFichier.add(ligneFichier);
-        boutonSauvegarder = new JButton("Sauvegarder");
+        boutonSauvegarder = new JButton("保存");
+        Theme.skinButton(boutonSauvegarder, Theme.icon(Theme.Symbol.SAVE));
         boutonSauvegarder.addActionListener(this);
         ligneFichier.add(boutonSauvegarder);
-        boutonCharger = new JButton("Charger");
+        boutonCharger = new JButton("加载");
+        Theme.skinButton(boutonCharger, Theme.icon(Theme.Symbol.LOAD));
         boutonCharger.addActionListener(this);
         ligneFichier.add(boutonCharger);
-        boutonSupprimer = new JButton("Supprimer");
+        boutonSupprimer = new JButton("删除");
+        Theme.skinButton(boutonSupprimer, Theme.icon(Theme.Symbol.DELETE));
         boutonSupprimer.addActionListener(this);
         ligneFichier.add(boutonSupprimer);
 
         JPanel colonneNom = new Colonne();
+        Theme.skinPanel(colonneNom);
         ligneHaut.add(colonneNom);
-        JLabel texteNom = new JLabel("Nom");
+        JLabel texteNom = new JLabel("名称");
         colonneNom.add(texteNom);
         JPanel ligneNom = new Ligne();
+        Theme.skinPanel(ligneNom);
         colonneNom.add(ligneNom);
         champNomNiveau = new JTextField(6);
         ligneNom.add(champNomNiveau);
 
         JPanel colonneBudget = new Colonne();
+        Theme.skinPanel(colonneBudget);
         ligneHaut.add(colonneBudget);
-        JLabel texteBudget = new JLabel("Budget");
+        JLabel texteBudget = new JLabel("预算");
         colonneBudget.add(texteBudget);
         JPanel ligneBudget = new Ligne();
+        Theme.skinPanel(ligneBudget);
         colonneBudget.add(ligneBudget);
         champBudget = new JTextField("0", 5);
         ligneBudget.add(champBudget);
 
         JPanel colonneCreation = new Colonne();
+        Theme.skinPanel(colonneCreation);
         ligneHaut.add(colonneCreation);
-        JLabel texteCreation = new JLabel("Creation");
+        JLabel texteCreation = new JLabel("编辑");
         colonneCreation.add(texteCreation);
         JPanel ligneCreation = new Ligne();
+        Theme.skinPanel(ligneCreation);
         colonneCreation.add(ligneCreation);
-        boutonAnnuler = new JButton("Annuler");
+        boutonAnnuler = new JButton("撤销");
+        Theme.skinButton(boutonAnnuler, Theme.icon(Theme.Symbol.UNDO));
         boutonAnnuler.addActionListener(this);
         ligneCreation.add(boutonAnnuler);
-        boutonEffacer = new JButton("Effacer");
+        boutonEffacer = new JButton("清空");
+        Theme.skinButton(boutonEffacer, Theme.icon(Theme.Symbol.CLEAR));
         boutonEffacer.addActionListener(this);
         ligneCreation.add(boutonEffacer);
 
         JPanel colonneJeu = new Colonne();
+        Theme.skinPanel(colonneJeu);
         ligneHaut.add(colonneJeu);
-        JLabel texteJeu = new JLabel("Jeu");
+        JLabel texteJeu = new JLabel("游戏");
         colonneJeu.add(texteJeu);
         JPanel ligneJeu = new Ligne();
+        Theme.skinPanel(ligneJeu);
         colonneJeu.add(ligneJeu);
-        boutonJeu = new JButton("Retour au jeu");
+        boutonJeu = new JButton("返回游戏");
+        Theme.skinButton(boutonJeu, Theme.icon(Theme.Symbol.GAME));
         boutonJeu.addActionListener(this);
         ligneJeu.add(boutonJeu);
 
         JPanel bas = new Ligne(box2d.getLargeurPixels() / 20, box2d.getHauteurPixels() / 50);
+        Theme.skinPanel(bas);
         this.add(bas, BorderLayout.PAGE_END);
 
         JPanel colonnePoint = new Colonne();
+        Theme.skinPanel(colonnePoint);
         bas.add(colonnePoint);
-        JLabel pointCommande = new JLabel("Clic gauche :");
+        JLabel pointCommande = new JLabel("鼠标左键：");
         colonnePoint.add(pointCommande);
-        JLabel point = new JLabel("ajouter un point");
+        JLabel point = new JLabel("添加地形点");
         colonnePoint.add(point);
 
         JPanel colonneLiaison = new Colonne();
+        Theme.skinPanel(colonneLiaison);
         bas.add(colonneLiaison);
-        JLabel liaisonCommande = new JLabel("Clic droit :");
+        JLabel liaisonCommande = new JLabel("鼠标右键：");
         colonneLiaison.add(liaisonCommande);
-        JLabel liaison = new JLabel("ajouter une liaison");
+        JLabel liaison = new JLabel("添加锚点");
         colonneLiaison.add(liaison);
     }
 
@@ -154,8 +173,7 @@ public class Editeur extends JPanel implements ActionListener, MouseInputListene
 
         Toolkit.getDefaultToolkit().sync();
 
-        g.setColor(Color.decode("#55a3d4"));
-        g.fillRect(0, 0, getWidth(), getHeight());
+        Theme.drawBackdrop(g, this);
 
         niveau.dessiner(g, box2d);
 

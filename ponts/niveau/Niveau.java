@@ -158,10 +158,10 @@ public class Niveau implements Serializable {
      */
     public void sauvegarder(Fenetre fenetre, String nomNiveau, String texteBudget) {
         String chemin = cheminNiveau(nomNiveau);
-        String titre = "Sauvegarde niveau";
+        String titre = "保存关卡";
 
         if (!valide()) {
-            JOptionPane.showMessageDialog(fenetre, "Le niveau est invalide", titre,
+            JOptionPane.showMessageDialog(fenetre, "关卡数据无效", titre,
                     JOptionPane.ERROR_MESSAGE);
         }
         try {
@@ -171,13 +171,13 @@ public class Niveau implements Serializable {
             objectOut.writeObject(this);
             objectOut.close();
             fileOut.close();
-            JOptionPane.showMessageDialog(fenetre, "Niveau sauvegardé", titre,
+            JOptionPane.showMessageDialog(fenetre, "关卡已保存", titre,
                     JOptionPane.INFORMATION_MESSAGE);
         } catch (NumberFormatException i) {
-            JOptionPane.showMessageDialog(fenetre, "Le budget est invalide", titre,
+            JOptionPane.showMessageDialog(fenetre, "预算数值无效", titre,
                     JOptionPane.ERROR_MESSAGE);
         } catch (FileNotFoundException i) {
-            JOptionPane.showMessageDialog(fenetre, "Le nom de niveau est invalide", titre,
+            JOptionPane.showMessageDialog(fenetre, "关卡名称无效", titre,
                     JOptionPane.ERROR_MESSAGE);
         } catch (IOException i) {
             i.printStackTrace();
@@ -196,7 +196,7 @@ public class Niveau implements Serializable {
             return null;
         }
         String chemin = cheminNiveau(nomNiveau);
-        String titre = "Charge niveau";
+        String titre = "加载关卡";
         Niveau niveau = null;
         try {
             FileInputStream fileIn = new FileInputStream(chemin);
@@ -206,7 +206,7 @@ public class Niveau implements Serializable {
             fileIn.close();
 
         } catch (FileNotFoundException i) {
-            JOptionPane.showMessageDialog(fenetre, "Niveau introuvable", titre, JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(fenetre, "找不到该关卡", titre, JOptionPane.ERROR_MESSAGE);
         } catch (IOException i) {
             i.printStackTrace();
         } catch (ClassNotFoundException i) {
@@ -238,12 +238,12 @@ public class Niveau implements Serializable {
      */
     public static void supprimer(Fenetre fenetre, String nomNiveau) {
         File file = new File(cheminNiveau(nomNiveau));
-        String titre = "Suppression niveau";
+        String titre = "删除关卡";
         if (file.delete()) {
-            JOptionPane.showMessageDialog(fenetre, "Niveau supprimé", titre,
+            JOptionPane.showMessageDialog(fenetre, "关卡已删除", titre,
                     JOptionPane.INFORMATION_MESSAGE);
         } else {
-            JOptionPane.showMessageDialog(fenetre, "Niveau introuvable", titre,
+            JOptionPane.showMessageDialog(fenetre, "找不到该关卡", titre,
                     JOptionPane.ERROR_MESSAGE);
         }
     }

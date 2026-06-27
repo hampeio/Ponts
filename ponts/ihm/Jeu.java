@@ -1,7 +1,6 @@
 package ponts.ihm;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -28,6 +27,7 @@ import org.jbox2d.common.Vec2;
 import ponts.niveau.Niveau;
 import ponts.physique.Partie;
 import ponts.physique.barres.Materiau;
+import ponts.physique.voiture.Voiture;
 
 /**
  * JPanel ou est dessiné le jeu
@@ -58,6 +58,8 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
     private JButton boutonDemarrer;
     private JButton boutonRecommencer;
     private JButton boutonEditeur;
+    private JComboBox<Voiture.Charge> comboCharge;
+    private JComboBox<Voiture.Style> comboStyle;
     private JLabel textePrix;
     private JLabel texteBudget;
     private JLabel texteMeilleur;
@@ -101,86 +103,123 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
         this.setOpaque(false);
 
         JPanel ligneHaut = new Ligne(box2d.getLargeurPixels() / 20, box2d.getHauteurPixels() / 100);
+        Theme.skinPanel(ligneHaut);
         this.add(ligneHaut, BorderLayout.PAGE_START);
 
         JPanel colonneNiveau = new Colonne();
+        Theme.skinPanel(colonneNiveau);
         ligneHaut.add(colonneNiveau);
-        JLabel texteNiveau = new JLabel("Niveau");
+        JLabel texteNiveau = new JLabel("关卡");
         colonneNiveau.add(texteNiveau);
         JPanel ligneNiveau = new Ligne();
+        Theme.skinPanel(ligneNiveau);
         colonneNiveau.add(ligneNiveau);
-        boutonPrecedent = new JButton("Précédent");
+        boutonPrecedent = new JButton("上一关");
+        Theme.skinButton(boutonPrecedent, Theme.icon(Theme.Symbol.PREVIOUS));
         boutonPrecedent.addActionListener(this);
         ligneNiveau.add(boutonPrecedent);
         comboBoxNiveaux = new JComboBox<String>();
         comboBoxNiveaux.addActionListener(this);
         ligneNiveau.add(comboBoxNiveaux);
-        boutonSuivant = new JButton("Suivant");
+        boutonSuivant = new JButton("下一关");
+        Theme.skinButton(boutonSuivant, Theme.icon(Theme.Symbol.NEXT));
         boutonSuivant.addActionListener(this);
         ligneNiveau.add(boutonSuivant);
 
         JPanel colonneMateriau = new Colonne();
+        Theme.skinPanel(colonneMateriau);
         ligneHaut.add(colonneMateriau);
-        JLabel textMateriau = new JLabel("Materiaux");
+        JLabel textMateriau = new JLabel("建材");
         colonneMateriau.add(textMateriau);
         JPanel ligneMateriau = new Ligne();
+        Theme.skinPanel(ligneMateriau);
         colonneMateriau.add(ligneMateriau);
-        boutonMateriauGoudron = new JButton("Goudron");
-        boutonMateriauGoudron.setToolTipText("Le seul materiau sur lequel la voiture peut rouler");
+        boutonMateriauGoudron = new JButton("路面");
+        Theme.skinButton(boutonMateriauGoudron, Theme.icon(Theme.Symbol.ROAD));
+        boutonMateriauGoudron.setToolTipText("车辆可以行驶的桥面材料");
         boutonMateriauGoudron.addActionListener(this);
         ligneMateriau.add(boutonMateriauGoudron);
-        boutonMateriauBois = new JButton("Bois");
-        boutonMateriauBois.setToolTipText("Materiau peu coûteux mais peu résistant");
+        boutonMateriauBois = new JButton("木材");
+        Theme.skinButton(boutonMateriauBois, Theme.icon(Theme.Symbol.WOOD));
+        boutonMateriauBois.setToolTipText("价格便宜，但强度较低");
         boutonMateriauBois.addActionListener(this);
         ligneMateriau.add(boutonMateriauBois);
-        boutonMateriauAcier = new JButton("Acier");
-        boutonMateriauAcier.setToolTipText("Materiau plus cher mais aussi plus solide");
+        boutonMateriauAcier = new JButton("钢材");
+        Theme.skinButton(boutonMateriauAcier, Theme.icon(Theme.Symbol.STEEL));
+        boutonMateriauAcier.setToolTipText("强度更高，造价也更高");
         boutonMateriauAcier.addActionListener(this);
         ligneMateriau.add(boutonMateriauAcier);
 
         JPanel colonneSimulation = new Colonne();
+        Theme.skinPanel(colonneSimulation);
         ligneHaut.add(colonneSimulation);
-        JLabel texteControles = new JLabel("Simulation");
+        JLabel texteControles = new JLabel("模拟");
         colonneSimulation.add(texteControles);
         JPanel ligneControles = new Ligne();
+        Theme.skinPanel(ligneControles);
         colonneSimulation.add(ligneControles);
         boutonDemarrer = new JButton();
+        Theme.skinButton(boutonDemarrer, Theme.icon(Theme.Symbol.PLAY));
         boutonDemarrer.addActionListener(this);
         ligneControles.add(boutonDemarrer);
-        boutonRecommencer = new JButton("Recommencer");
+        boutonRecommencer = new JButton("重置");
+        Theme.skinButton(boutonRecommencer, Theme.icon(Theme.Symbol.RESET));
         boutonRecommencer.addActionListener(this);
         ligneControles.add(boutonRecommencer);
 
         JPanel colonneEditeur = new Colonne();
+        Theme.skinPanel(colonneEditeur);
         ligneHaut.add(colonneEditeur);
-        JLabel texteEditeur = new JLabel("Editeur");
+        JLabel texteEditeur = new JLabel("工具");
         colonneEditeur.add(texteEditeur);
         JPanel ligneEditeur = new Ligne();
+        Theme.skinPanel(ligneEditeur);
         colonneEditeur.add(ligneEditeur);
-        boutonEditeur = new JButton("Editer un niveau");
+        boutonEditeur = new JButton("关卡编辑器");
+        Theme.skinButton(boutonEditeur, Theme.icon(Theme.Symbol.EDIT));
         boutonEditeur.addActionListener(this);
         ligneEditeur.add(boutonEditeur);
 
+        JPanel colonneVehicule = new Colonne();
+        Theme.skinPanel(colonneVehicule);
+        ligneHaut.add(colonneVehicule);
+        JLabel texteVehicule = new JLabel("车辆配置");
+        colonneVehicule.add(texteVehicule);
+        JPanel ligneVehicule = new Ligne();
+        Theme.skinPanel(ligneVehicule);
+        colonneVehicule.add(ligneVehicule);
+        comboCharge = new JComboBox<Voiture.Charge>(Voiture.Charge.values());
+        comboCharge.setToolTipText("载荷越重，对桥梁强度要求越高");
+        comboCharge.addActionListener(this);
+        ligneVehicule.add(comboCharge);
+        comboStyle = new JComboBox<Voiture.Style>(Voiture.Style.values());
+        comboStyle.addActionListener(this);
+        ligneVehicule.add(comboStyle);
+
         JPanel bas = new Ligne(box2d.getLargeurPixels() / 20, box2d.getHauteurPixels() / 50);
+        Theme.skinPanel(bas);
         this.add(bas, BorderLayout.PAGE_END);
 
         JPanel colonnePrix = new Colonne();
+        Theme.skinPanel(colonnePrix);
         bas.add(colonnePrix);
-        JLabel prix = new JLabel("Prix");
+        JLabel prix = new JLabel("造价");
         colonnePrix.add(prix);
         textePrix = new JLabel();
         colonnePrix.add(textePrix);
 
         JPanel colonneBudget = new Colonne();
+        Theme.skinPanel(colonneBudget);
         bas.add(colonneBudget);
-        JLabel budget = new JLabel("Budget");
+        JLabel budget = new JLabel("预算");
         colonneBudget.add(budget);
         texteBudget = new JLabel();
         colonneBudget.add(texteBudget);
 
         JPanel colonneMeilleur = new Colonne();
+        Theme.skinPanel(colonneMeilleur);
         bas.add(colonneMeilleur);
-        JLabel meilleur = new JLabel("Meilleur");
+        JLabel meilleur = new JLabel("最佳");
         colonneMeilleur.add(meilleur);
         texteMeilleur = new JLabel();
         colonneMeilleur.add(texteMeilleur);
@@ -199,8 +238,7 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
 
         Toolkit.getDefaultToolkit().sync(); // Fonction pour améliorer l'affichage sur Mac/Linux
 
-        g.setColor(Color.decode("#55a3d4"));
-        g.fillRect(0, 0, getWidth(), getHeight());
+        Theme.drawBackdrop(g, this);
 
         if (partie != null) {
             majTextLabels();
@@ -249,6 +287,9 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
             if (source == comboBoxNiveaux) {
                 nouvellePartie();
             }
+            if (source == comboCharge || source == comboStyle) {
+                nouvellePartie();
+            }
 
             Materiau materiau = null;
             if (source == boutonMateriauBois) {
@@ -288,13 +329,13 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
      * Met à jour les labels concernant le prix en bas de l'écran
      */
     private void majTextLabels() {
-        textePrix.setText(Integer.toString(partie.getPrix()) + " $");
-        texteBudget.setText(Integer.toString(partie.getBuget()) + " $");
+        textePrix.setText(partie.getPrix() + " 元");
+        texteBudget.setText(partie.getBuget() + " 元");
         int meilleurPrix = recupererMeilleurPrix();
         if (meilleurPrix == -1) {
-            texteMeilleur.setText("Ø");
+            texteMeilleur.setText("暂无");
         } else {
-            texteMeilleur.setText(Integer.toString(meilleurPrix) + " $");
+            texteMeilleur.setText(meilleurPrix + " 元");
         }
     }
 
@@ -320,9 +361,9 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
     private void majSimulation() {
         reinitialiserTemps();
         if (partie.getSimulationPhysique()) {
-            boutonDemarrer.setText("Pause");
+            boutonDemarrer.setText("暂停");
         } else {
-            boutonDemarrer.setText("Reprendre");
+            boutonDemarrer.setText("继续");
         }
     }
 
@@ -332,7 +373,7 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
      * @return niveau
      */
     private Niveau recupererNiveau() {
-        boutonDemarrer.setText("Démarrer");
+        boutonDemarrer.setText("开始");
         String nomNiveau = recupererNomNiveau();
         return Niveau.charger(fenetre, nomNiveau);
 
@@ -364,15 +405,13 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
      * Affiche le tutoriel
      */
     public void messageDebutJeu() {
-        String texte = "Bienvenue sur notre jeu de ponts !";
-        texte += "\n\n" + "Tu peux construire ton pont en cliquant sur des liaisons (les cercles).";
-        texte += "\n" + "Choisis bien le materiau en fonction de ses propriétés et son prix.";
-        texte += "\n" + "Quand tu es prêt, lance la simulation en cliquant sur le bouton ";
-        texte += boutonDemarrer.getText() + ".";
-        texte += "\n\n" + "Le niveau sera réussi si la voiture arrive de l'autre côté";
-        texte += "\n" + "et si le prix du pont est inférieur au budget.";
-        texte += "\n\n" + "Bonne chance !";
-        JOptionPane.showMessageDialog(fenetre, texte, "Tutoriel", JOptionPane.PLAIN_MESSAGE);
+        String texte = "欢迎来到《" + Theme.APP_NAME + "》！";
+        texte += "\n\n点击圆形锚点来搭建桥梁。";
+        texte += "\n请根据造价和强度选择合适的材料。";
+        texte += "\n还可以选择车辆载荷与外观；载荷越重，挑战越大。";
+        texte += "\n桥梁准备好后，点击“" + boutonDemarrer.getText() + "”启动模拟。";
+        texte += "\n\n车辆安全抵达对岸且总造价不超预算，即可过关。";
+        JOptionPane.showMessageDialog(fenetre, texte, "快速入门", JOptionPane.PLAIN_MESSAGE);
     }
 
     /**
@@ -384,19 +423,17 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
         String texte = "";
         String titre = "";
         if (niveauReussi) {
-            titre = "Niveau terminé";
-            texte += "Bravo, tu as réussi le niveau " + recupererNomNiveau() + " !";
-            texte += "\n\n" + "Prix : " + Integer.toString(partie.getPrix()) + " $";
-            texte += "\n" + "Meilleur : " + Integer.toString(recupererMeilleurPrix()) + " $";
-            texte += "\n\n" + "Tu peux passer au niveau suivant";
-            texte += "\n" + "ou essayer de faire un pont moins cher.";
+            titre = "挑战成功";
+            texte += "干得漂亮！关卡 " + recupererNomNiveau() + " 已完成。";
+            texte += "\n\n造价：" + partie.getPrix() + " 元";
+            texte += "\n最佳：" + recupererMeilleurPrix() + " 元";
+            texte += "\n\n可以进入下一关，或尝试更省钱的方案。";
         } else {
-            titre = "Niveau échoué";
-            texte += "Dommage, tu n'as pas réussi le niveau " + recupererNomNiveau() + ".";
-            texte += "\n\n" + "Ton pont a coûté trop cher :";
-            texte += "\n" + "Prix : " + Integer.toString(partie.getPrix()) + " $";
-            texte += "\n" + "Budget : " + Integer.toString(partie.getBuget()) + " $";
-            texte += "\n\n" + "Tu peux réessayer en cliquant sur " + boutonRecommencer.getText() + ".";
+            titre = "超出预算";
+            texte += "关卡 " + recupererNomNiveau() + " 未能满足预算要求。";
+            texte += "\n\n当前造价：" + partie.getPrix() + " 元";
+            texte += "\n预算：" + partie.getBuget() + " 元";
+            texte += "\n\n点击“" + boutonRecommencer.getText() + "”再试一次。";
         }
         JOptionPane.showMessageDialog(fenetre, texte, titre, JOptionPane.PLAIN_MESSAGE);
     }
@@ -438,7 +475,11 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
     private void nouvellePartie() {
         Niveau niveau = recupererNiveau();
         if (niveau != null) {
-            partie = new Partie(this, box2d, niveau);
+            Voiture.Charge charge = comboCharge == null ? Voiture.Charge.STANDARD
+                    : (Voiture.Charge) comboCharge.getSelectedItem();
+            Voiture.Style style = comboStyle == null ? Voiture.Style.CLASSIQUE
+                    : (Voiture.Style) comboStyle.getSelectedItem();
+            partie = new Partie(this, box2d, niveau, charge, style);
         } else {
             partie = null;
         }
@@ -450,9 +491,9 @@ public class Jeu extends JPanel implements ActionListener, MouseInputListener {
      */
     public void verifierExistanceNiveaux() {
         if (partie == null) {
-            String texte = "Aucun niveau détecté.";
-            texte += "\n" + "Commence par en créer un en cliquant sur le bouton '" + boutonEditeur.getText() + "'";
-            JOptionPane.showMessageDialog(fenetre, texte, "Erreur", JOptionPane.ERROR_MESSAGE);
+            String texte = "未检测到可用关卡。";
+            texte += "\n请在“" + boutonEditeur.getText() + "”中创建关卡。";
+            JOptionPane.showMessageDialog(fenetre, texte, "缺少关卡", JOptionPane.ERROR_MESSAGE);
         }
     }
 

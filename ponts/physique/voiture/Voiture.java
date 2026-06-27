@@ -15,6 +15,46 @@ import ponts.physique.environnement.Bord;
  */
 public class Voiture {
 
+    public enum Charge {
+        STANDARD("标准载荷", 1.0f, 0),
+        CAISSES("木箱载荷", 1.55f, 1),
+        ACIER("钢材载荷", 2.2f, 2);
+
+        public final String nom;
+        public final float densite;
+        public final int niveauVisuel;
+
+        Charge(String nom, float densite, int niveauVisuel) {
+            this.nom = nom;
+            this.densite = densite;
+            this.niveauVisuel = niveauVisuel;
+        }
+
+        @Override
+        public String toString() {
+            return nom;
+        }
+    }
+
+    public enum Style {
+        CLASSIQUE("经典红", new java.awt.Color(220, 45, 45)),
+        OCEAN("活力蓝", new java.awt.Color(35, 125, 220)),
+        CHANTIER("工程黄", new java.awt.Color(242, 172, 35));
+
+        public final String nom;
+        public final java.awt.Color couleur;
+
+        Style(String nom, java.awt.Color couleur) {
+            this.nom = nom;
+            this.couleur = couleur;
+        }
+
+        @Override
+        public String toString() {
+            return nom;
+        }
+    }
+
     public static final int CATEGORY = 0b0010;
     public static final int MASK = Bord.CATEGORY | BarreGoudron.CATEGORY;
 
@@ -33,7 +73,7 @@ public class Voiture {
      * @param world
      * @param niveau
      */
-    public Voiture(World world, Niveau niveau) {
+    public Voiture(World world, Niveau niveau, Charge charge, Style style) {
 
         xDepart = niveau.calculerDepart();
         xArrivee = niveau.calculerArrivee();
@@ -43,7 +83,7 @@ public class Voiture {
         Vec2 posRoueArriere = posRoueAvant.sub(new Vec2(ecartRoues, 0f));
         Vec2 posCarrosserie = new Vec2(0.5f * (posRoueArriere.x + posRoueAvant.x), posRoueArriere.y + 1.4f);
 
-        carrosserie = new Carrosserie(world, posCarrosserie);
+        carrosserie = new Carrosserie(world, posCarrosserie, charge, style);
         roueArriere = new Roue(world, posRoueArriere);
         roueAvant = new Roue(world, posRoueAvant);
 

@@ -1,44 +1,54 @@
-# Ponts
+# Skyline Span
 
-A java bridge building game
+A reskinned bridge-building game prototype based on the open source
+[Ponts](https://github.com/Lysquid/Ponts) project.
 
-![screenshot](screenshot.png)
+The gameplay core is intentionally unchanged:
 
-This project was made by three students at INSA Lyon for second year computer science class.
+- physics: JBox2D bridge, car, material, collision, and budget logic
+- levels: the original ten sample levels
+- editor: the original level authoring flow
 
-In the game, you build your bridge and launch the simulation to see if it will be solid enough for the car to cross it. You can build from 3 different materials (wood, steel and tarmac) with different proprieties, but beware not to exceed the budget. The game includes 10 levels, and a level editor to create even weirder terrains.
+This fork only changes the presentation layer:
 
-## Credits
+- window title and UI copy
+- Swing/FlatLaf colors
+- custom line icons for buttons
+- a new original car bitmap
+- Windows `compile.ps1` and `run.ps1` helpers
 
-The game uses the [JBox2D](https://github.com/jbox2d/jbox2d) library for the physics, an open source port of the C++ library [Box2D](https://box2d.org/).
-For the graphics, it relies on Swing with a modern theme provided by the [FlatLaf](https://www.formdev.com/flatlaf/themes/).
+## License and attribution
 
-The game is heavily inspired by [Poly Birdge](http://polybridge.drycactus.com/), a very cool game developed by Dry Cactus.
+Ponts is licensed under the MIT License. The original copyright and license are
+kept in `LICENSE`. Keep that file when distributing this fork.
 
-## Running the game
+The original game credits JBox2D for physics and FlatLaf for the Swing theme.
+This fork keeps those dependencies unchanged.
 
-Requirement : Java 11 or above
+## Run on Windows
 
-Download the file named `Ponts.jar` in the Releases section, and run it in the terminal by typing :
+Requirement: Java 11 or newer.
 
-```bash
-java -jar Ponts.jar
+```powershell
+.\run.ps1
 ```
 
-### Linux only
+To compile without launching:
 
-Give execute permissions to `complile.sh` and `execute.sh` scripts, and run them in this order :
+```powershell
+.\compile.ps1
+```
+
+## Run on Linux/macOS
 
 ```bash
-chmod +x complile.sh execute.sh
-./complile.sh
+chmod +x compile.sh execute.sh
+./compile.sh
 ./execute.sh
 ```
 
-### Alternative
+## Notes
 
-You can run the project by openening it inside VS Code with the Extension Pack for Java installed.
-
-## Demo
-
-[screencast](https://user-images.githubusercontent.com/32977249/201428102-d889df1f-99a6-46f5-9da4-680b92a400e5.webm)
+This is a legal open-source reskin starter, not a copy of the commercial
+Poly Bridge codebase. Replace the placeholder visual style with your own art,
+icons, title, levels, and audio before publishing.

@@ -36,7 +36,7 @@ public class Partie {
      * @param box2d
      * @param niveau
      */
-    public Partie(Jeu jeu, Box2D box2d, Niveau niveau) {
+    public Partie(Jeu jeu, Box2D box2d, Niveau niveau, Voiture.Charge charge, Voiture.Style style) {
         this.jeu = jeu;
 
         niveau.centrer(box2d);
@@ -47,7 +47,7 @@ public class Partie {
 
         bord = new Bord(world, niveau);
         pont = new Pont(world, niveau);
-        voiture = new Voiture(world, niveau);
+        voiture = new Voiture(world, niveau, charge, style);
         budget = niveau.getBudget();
 
     }
