@@ -36,6 +36,7 @@ public class Carrosserie extends ObjetPhysique {
     private Color couleurContour = Color.BLACK;
     private Voiture.Charge charge;
     private Voiture.Style style;
+    private float masseNiveau;
 
     private PolygonShape shape;
     private float longueur = 8f;
@@ -47,9 +48,10 @@ public class Carrosserie extends ObjetPhysique {
      * @param world
      * @param pos
      */
-    public Carrosserie(World world, Vec2 pos, Voiture.Charge charge, Voiture.Style style) {
+    public Carrosserie(World world, Vec2 pos, Voiture.Charge charge, Voiture.Style style, float masseNiveau) {
         this.charge = charge;
         this.style = style;
+        this.masseNiveau = masseNiveau;
         creerObjetPhysique(world);
         setPos(pos);
         chargerImage();
@@ -65,7 +67,7 @@ public class Carrosserie extends ObjetPhysique {
         shape = new PolygonShape();
         shape.setAsBox(longueur / 2, largeur / 2);
 
-        FixtureDef fixtureDef = creerFixtureDef(FRICTION, ELASTICITE, charge.densite, CATEGORY, MASK);
+        FixtureDef fixtureDef = creerFixtureDef(FRICTION, ELASTICITE, charge.densite * masseNiveau, CATEGORY, MASK);
         fixtureDef.shape = shape;
         body.createFixture(fixtureDef);
     }

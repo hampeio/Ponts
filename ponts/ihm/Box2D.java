@@ -72,7 +72,9 @@ public class Box2D {
     }
 
     public Vec2 pixelToWorld(int xP, int yP) {
-        return new Vec2(pixelToWorld(xP), pixelToWorldY(yP));
+        // X 必须经过带 cameraX 的专用转换。此前直接使用 pixelToWorld(xP)
+        // 会在视口移动后漏掉相机偏移，导致所有绝对放置工具整体错位。
+        return new Vec2(pixelToWorldX(xP), pixelToWorldY(yP));
     }
 
     /**

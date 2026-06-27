@@ -37,6 +37,7 @@ public class Niveau implements Serializable {
     private LinkedList<Vec2> posLiaisons;
     int budget = 0;
     private int limiteBarres = 0;
+    private ConfigurationVoiture configurationVoiture;
 
     /**
      * Constructeur d'un niveau
@@ -139,14 +140,22 @@ public class Niveau implements Serializable {
      * est alors dérivée du budget pour conserver leur compatibilité.
      */
     public int getLimiteBarres() {
-        if (limiteBarres > 0) {
-            return limiteBarres;
-        }
-        return Math.max(14, Math.min(32, budget / 6000));
+        return Math.max(0, limiteBarres);
     }
 
     public void setLimiteBarres(int limiteBarres) {
         this.limiteBarres = limiteBarres;
+    }
+
+    public ConfigurationVoiture getConfigurationVoiture() {
+        if (configurationVoiture == null) {
+            configurationVoiture = new ConfigurationVoiture();
+        }
+        return configurationVoiture;
+    }
+
+    public void setConfigurationVoiture(ConfigurationVoiture configurationVoiture) {
+        this.configurationVoiture = configurationVoiture;
     }
 
     /**
@@ -172,7 +181,7 @@ public class Niveau implements Serializable {
      * @param nomNiveau
      * @param texteBudget
      */
-    public void sauvegarder(Fenetre fenetre, String nomNiveau, String texteBudget) {
+    public void sauvegarder(Fenetre fenetre, String nomNiveau, String texteBudget, String texteLimiteBarres) {
         String chemin = cheminNiveau(nomNiveau);
         String titre = "保存关卡";
 
@@ -182,6 +191,15 @@ public class Niveau implements Serializable {
         }
         try {
             budget = Integer.parseInt(texteBudget);
+            if (texteLimiteBarres == null || texteLimiteBarres.trim().isEmpty()
+                    || "不限".equals(texteLimiteBarres.trim())) {
+                limiteBarres = 0;
+            } else {
+                limiteBarres = Integer.parseInt(texteLimiteBarres.trim());
+                if (limiteBarres < 0) {
+                    throw new NumberFormatException();
+                }
+            }
             FileOutputStream fileOut = new FileOutputStream(chemin);
             ObjectOutputStream objectOut = new ObjectOutputStream(fileOut);
             objectOut.writeObject(this);

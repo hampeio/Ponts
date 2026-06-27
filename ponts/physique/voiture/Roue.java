@@ -40,7 +40,10 @@ public class Roue extends ObjetPhysique {
      * @param world
      * @param pos
      */
-    public Roue(World world, Vec2 pos) {
+    private float multiplicateurMasse;
+
+    public Roue(World world, Vec2 pos, float multiplicateurMasse) {
+        this.multiplicateurMasse = multiplicateurMasse;
         creerObjetPhysique(world);
         setPos(pos);
     }
@@ -54,7 +57,7 @@ public class Roue extends ObjetPhysique {
         shape = new CircleShape();
         shape.setRadius(RAYON);
 
-        FixtureDef fixtureDef = creerFixtureDef(FRICTION, ELASTICITE, DENSITE, CATEGORY, MASK);
+        FixtureDef fixtureDef = creerFixtureDef(FRICTION, ELASTICITE, DENSITE * multiplicateurMasse, CATEGORY, MASK);
         fixtureDef.shape = shape;
         body.createFixture(fixtureDef);
     }
@@ -65,11 +68,11 @@ public class Roue extends ObjetPhysique {
      * @param world
      * @param carosserie
      */
-    public void lierVoiture(World world, Carrosserie carosserie) {
+    public void lierVoiture(World world, Carrosserie carosserie, float vitesse, float couple) {
         RevoluteJointDef jointDef = new RevoluteJointDef();
         jointDef.initialize(body, carosserie.getBody(), getPos());
-        jointDef.motorSpeed = MOTOR_SPEED;
-        jointDef.maxMotorTorque = MOTOR_TORQUE;
+        jointDef.motorSpeed = vitesse;
+        jointDef.maxMotorTorque = couple;
         jointDef.enableMotor = true;
 
         joint = (RevoluteJoint) world.createJoint(jointDef);

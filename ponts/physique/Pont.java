@@ -48,11 +48,16 @@ public class Pont implements Serializable {
     private Vec2 positionOutil = new Vec2();
     private boolean positionOutilValide;
     private Liaison selectionOutil;
+    private Liaison selectionOutilFin;
     private Liaison supportEnDeplacement;
     private Liaison courbeDepart;
     private Liaison courbeArrivee;
-    private Vec2 courbeControle;
+    private ArrayList<Vec2> courbeControles = new ArrayList<Vec2>();
     private boolean courbePrete;
+    private int poigneeCourbeActive = -1;
+    private String messageOutil = "请选择工具";
+    private LinkedList<Barre> dernierLotBarres = new LinkedList<Barre>();
+    private LinkedList<Liaison> dernierLotNoeuds = new LinkedList<Liaison>();
 
     /**
      * Constructeur d'un pont
@@ -170,10 +175,12 @@ public class Pont implements Serializable {
                     }
 
                     // Cas ou on doit creer une nouvelle barre
-                    if (barreEnCreation == null && liaisonProche != null && getNombreBarres() < limiteBarres) {
+                    if (barreEnCreation == null && liaisonProche != null && peutAjouterBarres(1)) {
                         creerBarre(world, posSouris, liaisonProche, materiau);
                         posSourisMax = posSourisMax(barreEnCreation, posSouris);
                         majPreview(posSourisMax);
+                    } else if (barreEnCreation == null && liaisonProche != null && limiteBarres > 0) {
+                        messageOutil = "已达到本关最大构件数量：" + limiteBarres;
                     }
 
                     break;
@@ -201,13 +208,7 @@ public class Pont implements Serializable {
      * @return
      */
     private Vec2 posSourisMax(Barre barre, Vec2 posSouris) {
-        if (barre == null) {
-            return posSouris;
-        } else if (barre.inferieurLongeurMax(posSouris)) {
-            return posSouris;
-        } else {
-            return barreEnCreation.posLiaisonMax(posSouris);
-        }
+        return posSouris;
     }
 
     /**
@@ -432,6 +433,10 @@ public class Pont implements Serializable {
         return limiteBarres;
     }
 
+    private boolean peutAjouterBarres(int quantite) {
+        return limiteBarres <= 0 || getNombreBarres() + quantite <= limiteBarres;
+    }
+
     public boolean estEnConstruction() {
         return barreEnCreation != null;
     }
@@ -490,8 +495,10 @@ public class Pont implements Serializable {
         arreterCreation(world);
         this.outil = outil;
         selectionOutil = null;
+        selectionOutilFin = null;
         supportEnDeplacement = null;
         reinitialiserCourbe();
+        messageOutil = instructionsOutil(outil);
     }
 
     public OutilConstruction getOutil() {
@@ -499,7 +506,11 @@ public class Pont implements Serializable {
     }
 
     public void actualiserOutil(Box2D box2d, Bord bord, int pixelX, int pixelY) {
-        positionOutil = box2d.pixelToWorld(pixelX, pixelY);
+        actualiserOutil(box2d.pixelToWorld(pixelX, pixelY), box2d, bord);
+    }
+
+    public void actualiserOutil(Vec2 positionSourisMonde, Box2D box2d, Bord bord) {
+        positionOutil = positionSourisMonde.clone();
         OutilConstruction typePlacement = supportEnDeplacement == null ? outil
                 : supportsUtilisateur.getOrDefault(supportEnDeplacement, OutilConstruction.DEPLACER);
         boolean dansMonde = positionOutil.x >= 0f && positionOutil.x <= box2d.getLargeur()
@@ -520,7 +531,13 @@ public class Pont implements Serializable {
 
     public void clicOutil(World world, Box2D box2d, Bord bord, int pixelX, int pixelY,
             int bouton, Materiau materiau) {
-        actualiserOutil(box2d, bord, pixelX, pixelY);
+        clicOutil(world, box2d.pixelToWorld(pixelX, pixelY), box2d, bord,
+                pixelX, pixelY, bouton, materiau);
+    }
+
+    public void clicOutil(World world, Vec2 positionSourisMonde, Box2D box2d, Bord bord,
+            int pixelX, int pixelY, int bouton, Materiau materiau) {
+        actualiserOutil(positionSourisMonde, box2d, bord);
 
         if (bouton == 3) {
             if (supprimerNoeudUtilisateurClique(world, positionOutil)) {
@@ -542,13 +559,13 @@ public class Pont implements Serializable {
                 ajouterSupport(world, positionOutil, OutilConstruction.PILIER);
                 break;
             case LIGNE:
-                clicLigne(world, box2d, pixelX, pixelY, materiau);
+                clicLigne(world, materiau);
                 break;
             case COURBE:
-                clicCourbe(box2d, pixelX, pixelY);
+                clicCourbe();
                 break;
             case DEPLACER:
-                clicDeplacer(box2d, pixelX, pixelY);
+                clicDeplacer();
                 break;
             case BARRE:
             default:
@@ -557,32 +574,61 @@ public class Pont implements Serializable {
     }
 
     public boolean confirmerOutil(World world, Materiau materiau) {
+        if (outil == OutilConstruction.LIGNE) {
+            if (selectionOutil == null || selectionOutilFin == null) {
+                messageOutil = "请先选择直线的起点和终点";
+                return false;
+            }
+            ArrayList<Vec2> points = echantillonnerLigne(selectionOutil.getPos(), selectionOutilFin.getPos());
+            boolean ok = genererChemin(world, selectionOutil, selectionOutilFin, points, materiau);
+            if (ok) {
+                selectionOutil = null;
+                selectionOutilFin = null;
+                messageOutil = "直线填充已生成";
+            }
+            return ok;
+        }
         if (outil != OutilConstruction.COURBE || !courbePrete) {
+            messageOutil = "请先选择贝塞尔曲线的起点和终点";
             return false;
         }
-        ArrayList<Vec2> points = new ArrayList<Vec2>();
-        Vec2 debut = courbeDepart.getPos();
-        Vec2 fin = courbeArrivee.getPos();
-        float longueurApprox = debut.sub(courbeControle).length() + courbeControle.sub(fin).length();
-        int segments = Math.max(2, (int) Math.ceil(longueurApprox / CoutsConstruction.ESPACEMENT_REMPLISSAGE));
-        for (int i = 0; i <= segments; i++) {
-            float t = i / (float) segments;
-            float u = 1f - t;
-            points.add(new Vec2(
-                    u * u * debut.x + 2f * u * t * courbeControle.x + t * t * fin.x,
-                    u * u * debut.y + 2f * u * t * courbeControle.y + t * t * fin.y));
-        }
+        ArrayList<Vec2> points = echantillonnerCourbe(courbeDepart.getPos(), courbeControles,
+                courbeArrivee.getPos());
         boolean ok = genererChemin(world, courbeDepart, courbeArrivee, points, materiau);
         if (ok) {
             reinitialiserCourbe();
+            messageOutil = "曲线填充已生成";
         }
         return ok;
     }
 
     public void annulerOutil() {
         selectionOutil = null;
+        selectionOutilFin = null;
         supportEnDeplacement = null;
         reinitialiserCourbe();
+        messageOutil = "当前操作已取消";
+    }
+
+    public void annulerOutil(World world) {
+        boolean operationEnCours = selectionOutil != null || courbeDepart != null || supportEnDeplacement != null;
+        if (operationEnCours) {
+            annulerOutil();
+            return;
+        }
+        if (!dernierLotBarres.isEmpty()) {
+            LinkedList<Barre> copie = new LinkedList<Barre>(dernierLotBarres);
+            for (Barre barre : copie) {
+                if (barres.contains(barre)) {
+                    supprimerBarre(world, barre);
+                }
+            }
+            dernierLotBarres.clear();
+            dernierLotNoeuds.clear();
+            messageOutil = "已撤销上一次自动填充";
+        } else {
+            messageOutil = "没有可撤销的自动填充";
+        }
     }
 
     private void ajouterSupport(World world, Vec2 position, OutilConstruction type) {
@@ -596,36 +642,77 @@ public class Pont implements Serializable {
         coutsNoeuds.put(support, cout);
     }
 
-    private void clicLigne(World world, Box2D box2d, int pixelX, int pixelY, Materiau materiau) {
-        Liaison proche = recupLiaisonProchePixel(box2d, pixelX, pixelY);
+    private void clicLigne(World world, Materiau materiau) {
+        Liaison proche = recupLiaisonProche(positionOutil);
         if (proche == null) {
+            messageOutil = "直线端点必须选择已有节点";
             return;
         }
         if (selectionOutil == null) {
             selectionOutil = proche;
+            messageOutil = "已选择起点，请选择终点";
+        } else if (selectionOutil != proche) {
+            selectionOutilFin = proche;
+            messageOutil = "直线预览完成，点击“确认”生成";
+        } else {
+            messageOutil = "终点不能与起点相同";
+        }
+    }
+
+    private void clicCourbe() {
+        if (courbeDepart == null) {
+            courbeDepart = recupLiaisonProche(positionOutil);
+            messageOutil = courbeDepart == null ? "曲线起点必须选择已有节点"
+                    : "已选择起点，请选择终点节点";
             return;
         }
-        if (selectionOutil != proche) {
-            ArrayList<Vec2> points = echantillonnerLigne(selectionOutil.getPos(), proche.getPos());
-            genererChemin(world, selectionOutil, proche, points, materiau);
+        if (courbeArrivee == null) {
+            Liaison proche = recupLiaisonProche(positionOutil);
+            if (proche == null || proche == courbeDepart) {
+                messageOutil = "曲线终点必须选择另一个已有节点";
+                return;
+            }
+            courbeArrivee = proche;
+            Vec2 debut = courbeDepart.getPos();
+            Vec2 fin = courbeArrivee.getPos();
+            Vec2 difference = fin.sub(debut);
+            courbeControles.clear();
+            courbeControles.add(debut.add(difference.mul(1f / 3f)));
+            courbeControles.add(debut.add(difference.mul(2f / 3f)));
+            courbePrete = true;
+            messageOutil = "拖动蓝色手柄调整贝塞尔曲线，完成后点击“确认”";
+            return;
         }
-        selectionOutil = null;
+        for (int i = 0; i < courbeControles.size(); i++) {
+            if (courbeControles.get(i).sub(positionOutil).length() <= 2.5f) {
+                poigneeCourbeActive = i;
+                messageOutil = "正在拖动控制手柄 " + (i + 1);
+                return;
+            }
+        }
+        messageOutil = "请拖动蓝色控制手柄，或点击“确认”生成";
     }
 
-    private void clicCourbe(Box2D box2d, int pixelX, int pixelY) {
-        if (courbeDepart == null) {
-            courbeDepart = recupLiaisonProchePixel(box2d, pixelX, pixelY);
-        } else if (courbeControle == null) {
-            courbeControle = positionOutil.clone();
-        } else if (courbeArrivee == null) {
-            courbeArrivee = recupLiaisonProchePixel(box2d, pixelX, pixelY);
-            courbePrete = courbeArrivee != null && courbeArrivee != courbeDepart;
+    public void glisserOutil(Vec2 positionSourisMonde) {
+        if (outil == OutilConstruction.COURBE && poigneeCourbeActive >= 0
+                && poigneeCourbeActive < courbeControles.size()) {
+            courbeControles.set(poigneeCourbeActive, positionSourisMonde.clone());
+            positionOutil = positionSourisMonde.clone();
+            messageOutil = "控制手柄 " + (poigneeCourbeActive + 1) + "：" + Math.round(positionSourisMonde.x)
+                    + ", " + Math.round(positionSourisMonde.y);
         }
     }
 
-    private void clicDeplacer(Box2D box2d, int pixelX, int pixelY) {
+    public void relacherOutil() {
+        if (poigneeCourbeActive >= 0) {
+            poigneeCourbeActive = -1;
+            messageOutil = "贝塞尔曲线已调整，点击“确认”生成";
+        }
+    }
+
+    private void clicDeplacer() {
         if (supportEnDeplacement == null) {
-            Liaison candidat = recupLiaisonProchePixel(box2d, pixelX, pixelY);
+            Liaison candidat = recupLiaisonProche(positionOutil);
             if (coutsNoeuds.containsKey(candidat)) {
                 supportEnDeplacement = candidat;
             }
@@ -678,11 +765,63 @@ public class Pont implements Serializable {
         return points;
     }
 
+    /**
+     * 三次贝塞尔：P0 为起点，P1/P2 为手柄，P3 为终点。手柄只影响曲线，
+     * 不会成为最终物理节点。
+     */
+    private ArrayList<Vec2> echantillonnerCourbe(Vec2 debut, ArrayList<Vec2> controles, Vec2 fin) {
+        ArrayList<Vec2> dense = new ArrayList<Vec2>();
+        Vec2 p1 = controles.size() > 0 ? controles.get(0) : debut;
+        Vec2 p2 = controles.size() > 1 ? controles.get(1) : fin;
+        for (int i = 0; i <= 64; i++) {
+            float t = i / 64f;
+            float u = 1f - t;
+            float x = u * u * u * debut.x + 3f * u * u * t * p1.x
+                    + 3f * u * t * t * p2.x + t * t * t * fin.x;
+            float y = u * u * u * debut.y + 3f * u * u * t * p1.y
+                    + 3f * u * t * t * p2.y + t * t * t * fin.y;
+            dense.add(new Vec2(x, y));
+        }
+        return reechantillonnerEspacementFixe(dense, CoutsConstruction.ESPACEMENT_REMPLISSAGE);
+    }
+
+    private ArrayList<Vec2> reechantillonnerEspacementFixe(ArrayList<Vec2> dense, float espacement) {
+        ArrayList<Vec2> resultat = new ArrayList<Vec2>();
+        Vec2 dernierEchantillon = dense.get(0).clone();
+        resultat.add(dernierEchantillon.clone());
+        float restant = espacement;
+
+        for (int i = 1; i < dense.size(); i++) {
+            Vec2 debutSegment = dense.get(i - 1).clone();
+            Vec2 finSegment = dense.get(i);
+            Vec2 direction = finSegment.sub(debutSegment);
+            float longueur = direction.length();
+            if (longueur <= 0.0001f) {
+                continue;
+            }
+            direction.mulLocal(1f / longueur);
+            while (longueur >= restant) {
+                debutSegment = debutSegment.add(direction.mul(restant));
+                resultat.add(debutSegment.clone());
+                longueur -= restant;
+                restant = espacement;
+            }
+            restant -= longueur;
+        }
+        Vec2 fin = dense.get(dense.size() - 1);
+        if (resultat.get(resultat.size() - 1).sub(fin).length() > 0.01f) {
+            resultat.add(fin.clone());
+        }
+        return resultat;
+    }
+
     private boolean genererChemin(World world, Liaison debut, Liaison fin, ArrayList<Vec2> points,
             Materiau materiau) {
         int segments = points.size() - 1;
         int nouveauxNoeuds = Math.max(0, segments - 1);
-        if (getNombreBarres() + segments > limiteBarres) {
+        if (!peutAjouterBarres(segments)) {
+            messageOutil = "杆件额度不足：需要 " + segments + "，剩余 "
+                    + Math.max(0, limiteBarres - getNombreBarres());
             return false;
         }
         int cout = nouveauxNoeuds * CoutsConstruction.NOEUD_GENERE;
@@ -690,9 +829,13 @@ public class Pont implements Serializable {
             cout += estimerPrixBarre(materiau, points.get(i).sub(points.get(i + 1)).length());
         }
         if (prix() + cout > budget) {
+            messageOutil = "预算不足：本次需要 " + cout + " 元，剩余 "
+                    + Math.max(0, budget - prix()) + " 元";
             return false;
         }
 
+        dernierLotBarres.clear();
+        dernierLotNoeuds.clear();
         Liaison precedente = debut;
         for (int i = 1; i < points.size(); i++) {
             Liaison suivante;
@@ -702,15 +845,17 @@ public class Pont implements Serializable {
                 LiaisonMobile noeud = new LiaisonMobile(world, points.get(i));
                 liaisons.add(noeud);
                 coutsNoeuds.put(noeud, CoutsConstruction.NOEUD_GENERE);
+                dernierLotNoeuds.add(noeud);
                 suivante = noeud;
             }
-            creerBarreDirecte(world, precedente, suivante, materiau);
+            dernierLotBarres.add(creerBarreDirecte(world, precedente, suivante, materiau));
             precedente = suivante;
         }
+        messageOutil = "已生成 " + segments + " 根构件和 " + nouveauxNoeuds + " 个节点";
         return true;
     }
 
-    private void creerBarreDirecte(World world, Liaison debut, Liaison fin, Materiau materiau) {
+    private Barre creerBarreDirecte(World world, Liaison debut, Liaison fin, Materiau materiau) {
         Barre barre = instancierBarre(world, debut, fin, materiau);
         barres.add(barre);
         barre.activerPhysique();
@@ -718,6 +863,7 @@ public class Pont implements Serializable {
         fin.activerPhysique();
         barre.lier(world, debut);
         barre.lier(world, fin);
+        return barre;
     }
 
     private Barre instancierBarre(World world, Liaison debut, Liaison fin, Materiau materiau) {
@@ -790,8 +936,31 @@ public class Pont implements Serializable {
     private void reinitialiserCourbe() {
         courbeDepart = null;
         courbeArrivee = null;
-        courbeControle = null;
+        courbeControles.clear();
         courbePrete = false;
+        poigneeCourbeActive = -1;
+    }
+
+    private String instructionsOutil(OutilConstruction outil) {
+        switch (outil) {
+            case LIGNE:
+                return "请选择直线起点";
+            case COURBE:
+                return "请选择曲线起点";
+            case ANCRAGE:
+                return "在地形表面放置锚点";
+            case PILIER:
+                return "在沟谷区域放置桥墩";
+            case DEPLACER:
+                return "选择用户创建的节点进行移动";
+            case BARRE:
+            default:
+                return "选择节点开始建造构件";
+        }
+    }
+
+    public String getMessageOutil() {
+        return messageOutil;
     }
 
     public int getNombreAncragesUtilisateur() {
@@ -832,6 +1001,26 @@ public class Pont implements Serializable {
         return total;
     }
 
+    public Vec2 getPositionOutil() {
+        return positionOutil.clone();
+    }
+
+    public ArrayList<Vec2> getPositionsSupportsUtilisateur() {
+        ArrayList<Vec2> positions = new ArrayList<Vec2>();
+        for (Liaison liaison : supportsUtilisateur.keySet()) {
+            positions.add(liaison.getPos().clone());
+        }
+        return positions;
+    }
+
+    public ArrayList<Vec2> getPoigneesCourbe() {
+        ArrayList<Vec2> poignees = new ArrayList<Vec2>();
+        for (Vec2 controle : courbeControles) {
+            poignees.add(controle.clone());
+        }
+        return poignees;
+    }
+
     private void dessinerSupportsUtilisateur(Graphics2D g, Box2D box2d) {
         for (Map.Entry<Liaison, OutilConstruction> entree : supportsUtilisateur.entrySet()) {
             Liaison liaison = entree.getKey();
@@ -862,21 +1051,44 @@ public class Pont implements Serializable {
             }
         }
         if (outil == OutilConstruction.LIGNE && selectionOutil != null) {
-            dessinerLignePointillee(g, box2d, selectionOutil.getPos(), positionOutil);
+            Vec2 fin = selectionOutilFin == null ? positionOutil : selectionOutilFin.getPos();
+            ArrayList<Vec2> points = echantillonnerLigne(selectionOutil.getPos(), fin);
+            dessinerCheminApercu(g, box2d, points);
         }
         if (outil == OutilConstruction.COURBE && courbeDepart != null) {
-            Vec2 controle = courbeControle == null ? positionOutil : courbeControle;
             Vec2 fin = courbeArrivee == null ? positionOutil : courbeArrivee.getPos();
-            Vec2 precedent = courbeDepart.getPos();
-            for (int i = 1; i <= 32; i++) {
-                float t = i / 32f;
-                float u = 1f - t;
-                Vec2 point = new Vec2(
-                        u * u * courbeDepart.getX() + 2f * u * t * controle.x + t * t * fin.x,
-                        u * u * courbeDepart.getY() + 2f * u * t * controle.y + t * t * fin.y);
-                dessinerLignePointillee(g, box2d, precedent, point);
-                precedent = point;
+            ArrayList<Vec2> points = echantillonnerCourbe(courbeDepart.getPos(), courbeControles, fin);
+            dessinerCheminApercu(g, box2d, points);
+            g.setColor(new Color(45, 135, 220, 190));
+            if (courbeControles.size() == 2 && courbeArrivee != null) {
+                Stroke ancien = g.getStroke();
+                g.setStroke(new BasicStroke(1.8f));
+                g.drawLine(box2d.worldToPixelX(courbeDepart.getX()), box2d.worldToPixelY(courbeDepart.getY()),
+                        box2d.worldToPixelX(courbeControles.get(0).x),
+                        box2d.worldToPixelY(courbeControles.get(0).y));
+                g.drawLine(box2d.worldToPixelX(courbeArrivee.getX()), box2d.worldToPixelY(courbeArrivee.getY()),
+                        box2d.worldToPixelX(courbeControles.get(1).x),
+                        box2d.worldToPixelY(courbeControles.get(1).y));
+                g.setStroke(ancien);
             }
+            for (Vec2 controle : courbeControles) {
+                int x = box2d.worldToPixelX(controle.x);
+                int y = box2d.worldToPixelY(controle.y);
+                g.fillOval(x - 8, y - 8, 16, 16);
+                g.setColor(Color.WHITE);
+                g.drawOval(x - 8, y - 8, 16, 16);
+                g.setColor(new Color(45, 135, 220, 190));
+            }
+        }
+    }
+
+    private void dessinerCheminApercu(Graphics2D g, Box2D box2d, ArrayList<Vec2> points) {
+        for (int i = 1; i < points.size(); i++) {
+            dessinerLignePointillee(g, box2d, points.get(i - 1), points.get(i));
+            int x = box2d.worldToPixelX(points.get(i).x);
+            int y = box2d.worldToPixelY(points.get(i).y);
+            g.setColor(new Color(55, 180, 105, 170));
+            g.fillOval(x - 4, y - 4, 8, 8);
         }
     }
 
@@ -895,18 +1107,12 @@ public class Pont implements Serializable {
         Vec2 cible = liaisonEnCreation.getPos();
         int x = box2d.worldToPixelX(origine.x);
         int y = box2d.worldToPixelY(origine.y);
-        int rayon = box2d.worldToPixel(Barre.LONGUEUR_MAX);
         int cibleX = box2d.worldToPixelX(cible.x);
         int cibleY = box2d.worldToPixelY(cible.y);
 
         Stroke ancienTrait = g.getStroke();
         Color couleur = dernierPlacementValide ? Color.decode("#59c36a") : Color.decode("#f0a33a");
-        g.setColor(new Color(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), 28));
-        g.fillOval(x - rayon, y - rayon, rayon * 2, rayon * 2);
         g.setColor(new Color(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), 205));
-        g.setStroke(new BasicStroke(2.2f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND,
-                10f, new float[] { 9f, 7f }, 0f));
-        g.drawOval(x - rayon, y - rayon, rayon * 2, rayon * 2);
         g.setStroke(new BasicStroke(2f));
         g.drawLine(x, y, cibleX, cibleY);
         g.fillOval(cibleX - 5, cibleY - 5, 10, 10);

@@ -7,6 +7,7 @@ import org.jbox2d.dynamics.World;
 
 import ponts.ihm.Box2D;
 import ponts.niveau.Niveau;
+import ponts.niveau.ConfigurationVoiture;
 import ponts.physique.barres.BarreGoudron;
 import ponts.physique.environnement.Bord;
 
@@ -66,9 +67,13 @@ public class Voiture {
     private boolean arrivee = false;
     private float xDepart;
     private float xArrivee;
-    private float boostRestant = 0f;
-    private boolean boostUtilise = false;
-
+    private ConfigurationVoiture config;
+    private float boostRestant;
+    private float boostCooldownRestant;
+    private float volRestant;
+    private float volCooldownRestant;
+    private boolean volDebloque;
+    private float hauteurDepart;
     /**
      * Constructeur d'une voiture
      * 
@@ -76,21 +81,32 @@ public class Voiture {
      * @param niveau
      */
     public Voiture(World world, Niveau niveau, Charge charge, Style style) {
+        this(world, niveau, charge, style, false);
+    }
+
+    public Voiture(World world, Niveau niveau, Charge charge, Style style, boolean volDebloque) {
 
         xDepart = niveau.calculerDepart();
         xArrivee = niveau.calculerArrivee();
+        config = niveau.getConfigurationVoiture();
+        this.volDebloque = volDebloque && config.volAutorise;
 
         float ecartRoues = 6f;
         Vec2 posRoueAvant = new Vec2(xDepart - ecartRoues, niveau.getPosCoins().get(1).y + Roue.RAYON);
         Vec2 posRoueArriere = posRoueAvant.sub(new Vec2(ecartRoues, 0f));
         Vec2 posCarrosserie = new Vec2(0.5f * (posRoueArriere.x + posRoueAvant.x), posRoueArriere.y + 1.4f);
 
-        carrosserie = new Carrosserie(world, posCarrosserie, charge, style);
-        roueArriere = new Roue(world, posRoueArriere);
-        roueAvant = new Roue(world, posRoueAvant);
+        carrosserie = new Carrosserie(world, posCarrosserie, charge, style, config.masse);
+        roueArriere = new Roue(world, posRoueArriere, config.masse);
+        roueAvant = new Roue(world, posRoueAvant, config.masse);
+        hauteurDepart = posCarrosserie.y;
 
-        roueArriere.lierVoiture(world, carrosserie);
-        roueAvant.lierVoiture(world, carrosserie);
+        roueArriere.lierVoiture(world, carrosserie, config.vitesseMax, config.acceleration);
+        roueAvant.lierVoiture(world, carrosserie, config.vitesseMax, config.acceleration);
+        Vec2 vitesseInitiale = new Vec2(config.vitesseInitiale, 0f);
+        carrosserie.getBody().setLinearVelocity(vitesseInitiale);
+        roueArriere.getBody().setLinearVelocity(vitesseInitiale);
+        roueAvant.getBody().setLinearVelocity(vitesseInitiale);
 
     }
 
@@ -136,33 +152,102 @@ public class Voiture {
     }
 
     public boolean activerBoost() {
-        if (boostUtilise || arretee) {
+        if (!config.boostAutorise || boostCooldownRestant > 0f || arretee) {
             return false;
         }
-        boostUtilise = true;
-        boostRestant = 1.35f;
-        roueArriere.reglerMoteur(18f, 180f);
-        roueAvant.reglerMoteur(18f, 180f);
+        boostRestant = config.boostDuree;
+        boostCooldownRestant = config.boostCooldown;
+        float vitesseBoost = config.vitesseMax * config.boostIntensite;
+        float coupleBoost = config.acceleration * config.boostIntensite * 1.5f;
+        roueArriere.reglerMoteur(vitesseBoost, coupleBoost);
+        roueAvant.reglerMoteur(vitesseBoost, coupleBoost);
+        float impulsionVitesse = Math.min(vitesseBoost, config.vitesseMax * 1.65f);
+        appliquerVitesseMinimale(carrosserie.getBody(), impulsionVitesse);
+        appliquerVitesseMinimale(roueArriere.getBody(), impulsionVitesse);
+        appliquerVitesseMinimale(roueAvant.getBody(), impulsionVitesse);
         return true;
     }
 
     public void tick(float dt) {
-        if (boostRestant <= 0f) {
-            return;
+        boostCooldownRestant = Math.max(0f, boostCooldownRestant - dt);
+        volCooldownRestant = Math.max(0f, volCooldownRestant - dt);
+
+        if (boostRestant > 0f) {
+            boostRestant -= dt;
+            if (boostRestant <= 0f && !arretee) {
+                roueArriere.reglerMoteur(config.vitesseMax, config.acceleration);
+                roueAvant.reglerMoteur(config.vitesseMax, config.acceleration);
+            }
         }
-        boostRestant -= dt;
-        if (boostRestant <= 0f && !arretee) {
-            roueArriere.reglerMoteur(10f, 80f);
-            roueAvant.reglerMoteur(10f, 80f);
+
+        if (volRestant > 0f) {
+            volRestant -= dt;
+            if (carrosserie.getY() < hauteurDepart + config.volHauteurMax) {
+                float forceY = config.volPousseeVerticale;
+                if (!config.volSubitGravite) {
+                    forceY += carrosserie.getBody().getMass() * 9.81f;
+                }
+                carrosserie.getBody().applyForceToCenter(new Vec2(config.volPousseeHorizontale, forceY));
+            }
         }
+
+        float limite = boostRestant > 0f ? config.vitesseMax * config.boostIntensite : config.vitesseMax;
+        limiterVitesse(carrosserie.getBody(), limite);
+        limiterVitesse(roueArriere.getBody(), limite);
+        limiterVitesse(roueAvant.getBody(), limite);
     }
 
     public boolean boostDisponible() {
-        return !boostUtilise;
+        return config.boostAutorise && boostCooldownRestant <= 0f;
+    }
+
+    public boolean activerVol() {
+        if (!volDebloque || !config.volDeclenchementManuel || volCooldownRestant > 0f || arretee) {
+            return false;
+        }
+        volRestant = config.volDuree;
+        volCooldownRestant = config.volCooldown;
+        return true;
+    }
+
+    public boolean volDisponible() {
+        return volDebloque && config.volDeclenchementManuel && volCooldownRestant <= 0f;
+    }
+
+    public boolean volEstDebloque() {
+        return volDebloque;
+    }
+
+    private void limiterVitesse(org.jbox2d.dynamics.Body body, float limite) {
+        Vec2 vitesse = body.getLinearVelocity();
+        if (vitesse.x > limite) {
+            body.setLinearVelocity(new Vec2(limite, vitesse.y));
+        } else if (vitesse.x < -limite) {
+            body.setLinearVelocity(new Vec2(-limite, vitesse.y));
+        }
+    }
+
+    private void appliquerVitesseMinimale(org.jbox2d.dynamics.Body body, float vitesseX) {
+        Vec2 vitesse = body.getLinearVelocity();
+        if (vitesse.x < vitesseX) {
+            body.setLinearVelocity(new Vec2(vitesseX, vitesse.y));
+        }
     }
 
     public float getX() {
         return carrosserie.getX();
+    }
+
+    public float getY() {
+        return carrosserie.getY();
+    }
+
+    public float getVitesseX() {
+        return carrosserie.getBody().getLinearVelocity().x;
+    }
+
+    public float getMasse() {
+        return carrosserie.getBody().getMass();
     }
 
     public boolean objectifAtteint() {

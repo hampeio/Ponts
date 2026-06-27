@@ -41,7 +41,8 @@ public class Partie {
      * @param box2d
      * @param niveau
      */
-    public Partie(Jeu jeu, Box2D box2d, Niveau niveau, Voiture.Charge charge, Voiture.Style style) {
+    public Partie(Jeu jeu, Box2D box2d, Niveau niveau, Voiture.Charge charge, Voiture.Style style,
+            boolean volDebloque) {
         this.jeu = jeu;
         this.box2d = box2d;
 
@@ -53,7 +54,7 @@ public class Partie {
 
         bord = new Bord(world, niveau);
         pont = new Pont(world, niveau);
-        voiture = new Voiture(world, niveau, charge, style);
+        voiture = new Voiture(world, niveau, charge, style, volDebloque);
         budget = niveau.getBudget();
         objectif = niveau.calculerObjectif();
         box2d.setCameraX(Math.max(0f, niveau.calculerDepart() - 18f));
@@ -159,6 +160,18 @@ public class Partie {
         return voiture.boostDisponible();
     }
 
+    public boolean activerVol() {
+        return simulationPhysique && voiture.activerVol();
+    }
+
+    public boolean volDisponible() {
+        return voiture.volDisponible();
+    }
+
+    public boolean volEstDebloque() {
+        return voiture.volEstDebloque();
+    }
+
     /**
      * Traite immédiatement un clic de construction depuis Swing. Cela évite de
      * perdre un clic court entre deux impulsions du timer physique.
@@ -170,12 +183,17 @@ public class Partie {
     }
 
     public void clicConstructionPixel(int pixelX, int pixelY, int bouton) {
+        clicConstruction(box2d.pixelToWorld(pixelX, pixelY), pixelX, pixelY, bouton);
+    }
+
+    public void clicConstruction(Vec2 positionSourisMonde, int pixelX, int pixelY, int bouton) {
         if (!simulationPhysique && creationPont) {
             if (pont.getOutil() != OutilConstruction.BARRE) {
-                pont.clicOutil(world, box2d, bord, pixelX, pixelY, bouton, materiau);
+                pont.clicOutil(world, positionSourisMonde, box2d, bord,
+                        pixelX, pixelY, bouton, materiau);
                 return;
             }
-            Vec2 positionLibre = box2d.pixelToWorld(pixelX, pixelY);
+            Vec2 positionLibre = positionSourisMonde;
             Vec2 positionAccrochee = pont.estEnConstruction()
                     ? pont.positionDepuisDirectionPixel(box2d, pixelX, pixelY)
                     : pont.accrocherPositionPixel(box2d, pixelX, pixelY, positionLibre);
@@ -184,14 +202,28 @@ public class Partie {
     }
 
     public void deplacerConstructionPixel(int pixelX, int pixelY) {
+        deplacerConstruction(box2d.pixelToWorld(pixelX, pixelY), pixelX, pixelY);
+    }
+
+    public void deplacerConstruction(Vec2 positionSourisMonde, int pixelX, int pixelY) {
         if (!simulationPhysique && creationPont) {
             if (pont.getOutil() == OutilConstruction.BARRE && pont.estEnConstruction()) {
                 Vec2 position = pont.positionDepuisDirectionPixel(box2d, pixelX, pixelY);
                 pont.gererInput(world, position, 0, false, materiau, bord);
             } else {
-                pont.actualiserOutil(box2d, bord, pixelX, pixelY);
+                pont.actualiserOutil(positionSourisMonde, box2d, bord);
             }
         }
+    }
+
+    public void glisserOutil(Vec2 positionSourisMonde) {
+        if (!simulationPhysique && creationPont) {
+            pont.glisserOutil(positionSourisMonde);
+        }
+    }
+
+    public void relacherOutil() {
+        pont.relacherOutil();
     }
 
     public boolean noeudSousCurseur(Vec2 position) {
@@ -211,7 +243,7 @@ public class Partie {
     }
 
     public void annulerOutil() {
-        pont.annulerOutil();
+        pont.annulerOutil(world);
     }
 
     public int getNombreAncragesUtilisateur() {
@@ -228,6 +260,10 @@ public class Partie {
 
     public int getCoutSupports() {
         return pont.getCoutSupports();
+    }
+
+    public String getMessageOutil() {
+        return pont.getMessageOutil();
     }
 
     private void suivreVoiture() {
